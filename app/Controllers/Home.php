@@ -2,10 +2,16 @@
 
 namespace App\Controllers;
 
+use App\Models\SocieteModel;
+use App\Models\TypeSocieteModel;
+
 class Home extends BaseController
 {
     public function index(): string
     {
-        return view('welcome_message');
+        $societes = (new SocieteModel())->orderBy('id', 'DESC')->findAll();
+        $types = (new TypeSocieteModel())->findAll();
+
+        return view('home/index', compact('societes', 'types'));
     }
 }

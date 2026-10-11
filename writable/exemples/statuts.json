@@ -1,0 +1,12 @@
+{
+    "type": "SA",
+    "mode_administration": "CA",
+    "denomination": "EXEMPLE SA",
+    "siege": "Antananarivo",
+    "objet": "Société de démonstration pour le logiciel",
+    "capital": "10000000.00",
+    "duree_annees": 99,
+    "code_activite": null,
+    "source_mentions": "Loi 2003-036, article 10",
+    "statut_source": "à confirmer"
+}

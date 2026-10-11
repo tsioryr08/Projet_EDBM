@@ -1,0 +1,25 @@
+{
+    "societe_id": 1,
+    "reunion_id": null,
+    "titre": "Convocation à une assemblée générale",
+    "societe": "EXEMPLE SA",
+    "nature": "AGO",
+    "numero_convocation": 1,
+    "date_reunion": "2026-12-15",
+    "heure": "09:00",
+    "lieu": "Siège social",
+    "ordre_du_jour": [
+        "Approbation des comptes",
+        "Questions diverses"
+    ],
+    "delai_jours": 15,
+    "mode_calcul": "franc",
+    "date_convocation": "2026-11-29",
+    "forme_envoi": "Lettre recommandée avec accusé de réception",
+    "source": "Source à confirmer",
+    "verifie": false,
+    "justification": {
+        "motif": "Exemple d'affichage : la date et le délai sont fournis par le service métier.",
+        "avertissement": "Données d'exemple uniquement."
+    }
+}

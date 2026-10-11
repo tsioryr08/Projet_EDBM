@@ -1,0 +1,11 @@
+{
+    "societe": "EXEMPLE SA",
+    "nature": "AGO",
+    "numero_convocation": 1,
+    "date_tenue": "2026-12-15",
+    "lieu": "Siège social",
+    "quorum_requis": "1/4",
+    "quorum_atteint": true,
+    "participants": [],
+    "resolutions": []
+}
