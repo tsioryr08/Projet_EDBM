@@ -1,0 +1,57 @@
+Je travaille en binôme sur un projet legaltech (droit des sociétés, Madagascar, CodeIgniter 4 + MariaDB). Je m'occupe des Lots 1 et 2 (base de données et fonctions de calcul) ; toi, tu avances sur les générateurs PDF (statuts, convocations, PV). Voici où j'en suis, pour qu'on reste alignés.
+
+LOT 1 : TERMINÉ ET TESTÉ.
+- 22 tables créées par 4 migrations (référentiels, règles, société/associés/dirigeants/dossier, réunions/assemblées/votes) ; seeders exécutés sans erreur.
+- Les règles juridiques sont des données : regle_delai (délai, mode de calcul, forme d'envoi, source, verifie) et regle_quorum (quorum et majorité en fractions num/den). Colonne verifie = 1 si vérifiée dans un texte malgache. Ce qui n'est pas trouvé (SNC, SCS, SCA, SC, quorum SARL) reste « à chercher » : on l'ajoute par une ligne de seeder.
+- Deux changements par rapport au plan v5 : ajout de reunion.reunion_precedente_id (lie une 2e convocation à la 1re) ; validité des pièces stockée en MOIS (document_requis.validite_mois : 3 ou 12) et non en jours.
+
+LOT 2 : À MOITIÉ FAIT.
+- Fait et vérifié en base : app/Libraries/CalculRegles.php (calcul de la date de convocation en 3 modes, validité des pièces, quorum, adoption, procuration) et ReunionService::planifier(), qui lit le délai dans regle_delai, calcule date_convocation et enregistre réunion + convoqués. Test réel : AGO d'EXEMPLE SA le 2026-12-15 → délai 15 j lu en base → date_convocation 2026-11-29.
+- À faire : AssembleeService (présents/représentés/absents, quorum via regle_quorum, votes, résolution adoptée ou non).
+
+JOURS FRANCS (choix du projet) : date_convocation = date_réunion − délai − 1. Exemple : 15/12/2026 avec 15 jours → 29/11/2026 (30/11 en calendaire).
+
+POUR LES GÉNÉRATEURS : planifier() renvoie un tableau avec societe, type, nature, numero_convocation, date_reunion, heure, lieu, delai_jours, mode_calcul, date_convocation, forme_envoi, source, en_retard, et convoques (liste des noms). Utilise date_convocation tel quel, sans la recalculer. Le générateur de PV recevra l'objet « assemblee » déjà calculé (participants, quorum_atteint, resolutions avec pour/contre/adoptee).
+
+CONSIGNES : ne mets aucun délai, quorum ou majorité en dur dans le code ; lis-les en base. Si une règle manque, signale-le au lieu de l'inventer. Dis-moi si le format des données te pose problème ou si tu veux un autre champ.
+
+
+
+
+
+
+Je travaille en binôme sur un projet legaltech (droit des sociétés, Madagascar, CodeIgniter 4.7 + MariaDB). Je m'occupe des Lots 1 et 2 (base de données et fonctions de calcul) ; toi, tu avances sur les générateurs PDF (statuts, convocations, PV). Voici où j'en suis, pour qu'on reste alignés.
+
+LOT 1 : TERMINÉ ET TESTÉ.
+- 22 tables créées par 4 migrations (app/Database/Migrations) ; seeders exécutés sans erreur (app/Database/Seeds : DatabaseSeeder appelle TypeSociete, NatureReunion, EtapeCreation, RegleDelai, RegleQuorum, DocumentRequis).
+- Les règles juridiques sont des données : regle_delai (délai, mode de calcul, forme d'envoi, source, verifie) et regle_quorum (quorum et majorité en fractions num/den). verifie = 1 si vérifiée dans un texte malgache. Ce qui n'est pas trouvé (SNC, SCS, SCA, SC, quorum SARL, majorité de l'AGC) reste « à chercher » : on l'ajoute par une ligne de seeder.
+- Changements par rapport au plan v5 : ajout de reunion.reunion_precedente_id (lie une 2e convocation à la 1re) ; validité des pièces stockée en MOIS (document_requis.validite_mois : 3 ou 12), pas en jours.
+- DemoSeeder (php spark db:seed DemoSeeder) crée une société de test « EXEMPLE SA » : SA avec CA, 4 actionnaires (100, 50, 50, 100 titres = 300 voix), 3 administrateurs.
+
+LOT 2 : FAIT ET TESTÉ (sauf checklist des pièces).
+Fichiers, tous en namespace App :
+- app/Libraries/CalculRegles.php : PHP pur. calculerDateConvocation(dateReunion, delai, mode, joursFeries) ; pieceEstValide(datePiece, validiteMois, dateDepot) ; calculerQuorum(participants, regle, voixTotales) ; resolutionAdoptee(voix, regle, voixPresentes) ; procurationValide(nature, mandantId, mandataireId, pouvoirsExistants).
+- app/Models/ : un Model par table utile (TypeSociete, Societe, Associe, Dirigeant, RegleDelai, RegleQuorum, Reunion, Convoque, Assemblee, Participant, Pouvoir, Resolution). RegleDelaiModel et RegleQuorumModel ont trouver(typeId, nature, numeroConvocation) qui renvoie null si la règle est « à chercher ».
+- app/Libraries/ReunionService.php : planifier(...) lit le délai dans regle_delai, calcule date_convocation, enregistre la réunion et ses convoqués (administrateurs pour un CA, associés/actionnaires sinon). Lève une exception claire si la règle n'existe pas.
+- app/Libraries/AssembleeService.php : tenir(reunionId, participants) enregistre la tenue, calcule les voix depuis la base, contrôle les procurations (une seule par mandataire au CA, art. 485), vérifie le quorum via regle_quorum et propose une 2e convocation si le quorum manque ; voter(assembleeId, resolutions) calcule l'adoption de chaque résolution (refuse si quorum non atteint ou majorité « à chercher ») ; versJson(assembleeId) produit l'objet « assemblee » du contrat d'interface.
+- app/Commands/DemoConvocation.php et DemoAssemblee.php : démos en terminal (php spark demo:convocation, php spark demo:assemblee ; --save pour garder les données, sinon tout est annulé).
+PHPUnit n'est pas utilisé : on teste avec ces commandes.
+
+RÉSULTATS RÉELS OBTENUS.
+- Convocation : AGO d'EXEMPLE SA le 2026-12-15, délai 15 j lu en base, mode franc -> date_convocation = 2026-11-29 (2026-11-30 en calendaire).
+- Assemblée : 150 voix sur 300, quorum AGO 1/4 atteint ; résolution « pour 150 / contre 0 » adoptée, « pour 50 / contre 100 » rejetée. AGE avec 100 voix sur 300 : quorum 1/2 manqué, message « 2e convocation possible (quorum 1/4) ».
+
+JOURS FRANCS (choix du projet) : date_convocation = date_réunion − délai − 1. Exemple : 15/12/2026 avec 15 jours -> 29/11/2026.
+
+CE QUE TU PEUX UTILISER (formats exacts).
+- planifier() renvoie : societe, type, nature, numero_convocation, date_reunion, heure, lieu, delai_jours, mode_calcul, date_convocation, forme_envoi, source, verifie, en_retard, reunion_id, convoques (liste de noms). Utilise date_convocation tel quel, sans la recalculer.
+- versJson() renvoie : { participants: [{nom, statut (present|represente|absent), par (si représenté), voix}], quorum_atteint: bool, resolutions: [{texte, pour, contre, adoptee: bool}] }. C'est l'entrée du générateur de PV.
+
+CE QUI RESTE (par moi, sauf mention).
+1) Justification juridique affichée partout : chaque décision calculée (délai, quorum, adoption, égalité de voix...) doit renvoyer motif en une phrase + source (article) + statut (vérifié / à confirmer / déduction). Tu pourras l'afficher dans la convocation et le PV, quand je te donnerai les champs.
+2) Voix prépondérante du président au CA en cas d'égalité (art. 483) : pour l'instant la résolution est rejetée et egalite_voix_president = true est signalé.
+3) Checklist des pièces (lecture de document_requis selon type, catégorie d'associé, mode d'administration, validité des pièces).
+4) Règles « à chercher » : délais et quorums SNC, SCS, SCA, SC, SARL ; majorité de l'AGC ; SARLU (décision de l'associé unique, pas de convocation ni de quorum).
+5) Lot 5 : interface, ensemble.
+
+CONSIGNES : ne mets aucun délai, quorum ou majorité en dur ; lis-les en base. Si une règle manque, signale-le au lieu de l'inventer. Dis-moi si le format des données te pose problème ou si tu veux un autre champ.

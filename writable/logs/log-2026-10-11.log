@@ -1,0 +1,36 @@
+ERROR - 2026-10-11 07:42:06 --> Error connecting to the database: mysqli_sql_exception: No such file or directory in /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php(201): mysqli->real_connect()
+#1 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(555): CodeIgniter\Database\MySQLi\Connection->connect()
+#2 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(795): CodeIgniter\Database\BaseConnection->initialize()
+#3 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(1706): CodeIgniter\Database\BaseConnection->query()
+#4 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(1726): CodeIgniter\Database\BaseConnection->listTables()
+#5 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MigrationRunner.php(821): CodeIgniter\Database\BaseConnection->tableExists()
+#6 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MigrationRunner.php(173): CodeIgniter\Database\MigrationRunner->ensureTable()
+#7 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Commands/Database/Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest()
+#8 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::{closure:CodeIgniter\Commands\Database\Migrate::run():88}()
+#9 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Commands/Database/Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked()
+#10 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run()
+#11 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run()
+#12 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(442): CodeIgniter\CLI\Console->run()
+#13 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(166): CodeIgniter\Boot::runCommand()
+#14 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/spark(87): CodeIgniter\Boot::bootSpark()
+#15 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: No such file or directory in /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php:231
+Stack trace:
+#0 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(555): CodeIgniter\Database\MySQLi\Connection->connect()
+#1 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(795): CodeIgniter\Database\BaseConnection->initialize()
+#2 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(1706): CodeIgniter\Database\BaseConnection->query()
+#3 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(1726): CodeIgniter\Database\BaseConnection->listTables()
+#4 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MigrationRunner.php(821): CodeIgniter\Database\BaseConnection->tableExists()
+#5 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MigrationRunner.php(173): CodeIgniter\Database\MigrationRunner->ensureTable()
+#6 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Commands/Database/Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest()
+#7 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::{closure:CodeIgniter\Commands\Database\Migrate::run():88}()
+#8 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Commands/Database/Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked()
+#9 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run()
+#10 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run()
+#11 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(442): CodeIgniter\CLI\Console->run()
+#12 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(166): CodeIgniter\Boot::runCommand()
+#13 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/spark(87): CodeIgniter\Boot::bootSpark()
+#14 {main}

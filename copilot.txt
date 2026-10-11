@@ -1,0 +1,17 @@
+PROJET : logiciel legaltech « création et vie de la société » (Madagascar), cours de droit des sociétés.
+Il aide à créer une société (type, checklist des pièces, statuts PDF) puis à la faire vivre : convocation d'assemblées, présents/procurations, quorum, votes, procès-verbaux PDF.
+Types : SA, SARL, SARLU, SCS, SCA, SNC, SC. Réunions : AGC, AGO, AGE, CA. Droit : loi 2003-036 modifiée par la loi 2014-010 (pas de droit français).
+
+STACK : PHP 8.1+, CodeIgniter 4.7, MariaDB. Schéma par migrations, données par seeders. Noms de tables et colonnes en français sans accents.
+Architecture : logique métier dans app/Libraries, accès base dans app/Models, contrôleurs minces.
+
+RÈGLE D'OR : les délais, quorums, majorités et documents requis sont des DONNÉES (tables regle_delai, regle_quorum, document_requis), jamais du code en dur.
+Si une règle manque, dis-le au lieu de l'inventer.
+
+JOURS FRANCS : date_convocation = date_réunion − délai − 1 (ni le jour d'envoi ni le jour de réunion ne comptent).
+Exemple : réunion le 2026-12-15, délai 15 jours → 2026-11-29 en franc (2026-11-30 en calendaire).
+Quorums : fractions entières (num/den), calcul en arithmétique entière.
+
+DÉJÀ FAIT : 22 tables (migrations), seeders des règles, CalculRegles (app/Libraries), ReunionService::planifier() qui lit regle_delai, calcule et enregistre la réunion.
+
+TÂCHE : (écris ici ce que tu veux)
