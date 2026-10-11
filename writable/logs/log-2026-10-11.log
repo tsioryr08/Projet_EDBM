@@ -228,3 +228,48 @@ in SYSTEMPATH/Database/MySQLi/Connection.php on line 300.
 12 SYSTEMPATH/Boot.php(442): CodeIgniter\CLI\Console->run()
 13 SYSTEMPATH/Boot.php(166): CodeIgniter\Boot::runCommand()
 14 ROOTPATH/spark(87): CodeIgniter\Boot::bootSpark()
+CRITICAL - 2026-10-11 15:45:03 --> RuntimeException: Société #1 introuvable.
+[Method: GET, Route: pdf/constitutifs/1/bulletin_souscription]
+in APPPATH/Controllers/Constituants.php on line 19.
+ 1 SYSTEMPATH/CodeIgniter.php(951): App\Controllers\Constituants->generate()
+ 2 SYSTEMPATH/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+ 3 SYSTEMPATH/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+ 4 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 6 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ 7 SYSTEMPATH/rewrite.php(44): require_once('/opt/lampp/htdocs/DLA/Projet_EDBM/public/index.php')
+CRITICAL - 2026-10-11 15:46:11 --> RuntimeException: Société #1 introuvable.
+[Method: GET, Route: pdf/constitutifs/1/bulletin_souscription]
+in APPPATH/Controllers/Constituants.php on line 19.
+ 1 SYSTEMPATH/CodeIgniter.php(951): App\Controllers\Constituants->generate()
+ 2 SYSTEMPATH/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+ 3 SYSTEMPATH/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+ 4 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 6 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ 7 SYSTEMPATH/rewrite.php(44): require_once('/opt/lampp/htdocs/DLA/Projet_EDBM/public/index.php')
+CRITICAL - 2026-10-11 15:46:13 --> RuntimeException: Société #1 introuvable.
+[Method: GET, Route: pdf/constitutifs/1/bulletin_souscription]
+in APPPATH/Controllers/Constituants.php on line 19.
+ 1 SYSTEMPATH/CodeIgniter.php(951): App\Controllers\Constituants->generate()
+ 2 SYSTEMPATH/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+ 3 SYSTEMPATH/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+ 4 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 6 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ 7 SYSTEMPATH/rewrite.php(44): require_once('/opt/lampp/htdocs/DLA/Projet_EDBM/public/index.php')
+CRITICAL - 2026-10-11 16:49:33 --> RuntimeException: Société #4 introuvable.
+[Method: GET, Route: dossiers/4]
+in APPPATH/Libraries/DossierService.php on line 32.
+ 1 APPPATH/Controllers/Dossiers.php(12): App\Libraries\DossierService->afficher()
+ 2 SYSTEMPATH/CodeIgniter.php(951): App\Controllers\Dossiers->show()
+ 3 SYSTEMPATH/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ 8 SYSTEMPATH/rewrite.php(44): require_once('/opt/lampp/htdocs/DLA/Projet_EDBM/public/index.php')
+CRITICAL - 2026-10-11 17:07:04 --> ErrorException: Unparenthesized `a ? b : c ?: d` is not supported. Use either `(a ? b : c) ?: d` or `a ? b : (c ?: d)`
+[Method: CLI, Route: routes]
+in APPPATH/Controllers/Dossiers.php on line 47.
+ 1 [internal function]: CodeIgniter\Debug\Exceptions->shutdownHandler()

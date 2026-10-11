@@ -1,0 +1,32 @@
+{
+    "societe_id": 1,
+    "reunion_id": 2,
+    "titre": "Convocation du conseil d’administration",
+    "societe": "EXEMPLE SA",
+    "type": "SA",
+    "nature": "CA",
+    "numero_convocation": 1,
+    "date_reunion": "2026-12-10",
+    "heure": "10:00",
+    "lieu": "Siège social",
+    "ordre_du_jour": [
+        "Autorisation d’une convention"
+    ],
+    "delai_jours": 3,
+    "mode_calcul": "franc",
+    "date_convocation": "2026-12-06",
+    "forme_envoi": "Selon les statuts",
+    "source": "Statuts — à confirmer",
+    "verifie": false,
+    "convoques": [
+        {
+            "nom_affiche": "RAKOTO Jean",
+            "role": "administrateur",
+            "mode_envoi": "Selon les statuts",
+            "date_envoi": "2026-12-06"
+        }
+    ],
+    "justification": {
+        "motif": "Données fournies par le service de planification."
+    }
+}
