@@ -8,6 +8,8 @@ class TypeSocieteSeeder extends Seeder
 {
     public function run()
     {
+        $existants = array_column($this->db->table('type_societe')->select('code')->get()->getResultArray(), 'code');
+
         $rows = [
             ['code' => 'SA', 'libelle' => 'Société anonyme', 'est_commerciale' => 1, 'dans_liste_orinasa' => 1,
              'organe_direction' => "Conseil d'administration ou administrateur général",
@@ -37,6 +39,11 @@ class TypeSocieteSeeder extends Seeder
              'associes_min' => null, 'associes_max' => null, 'capital_minimum' => null,
              'note' => 'Société civile : loi 2001-026 (à lire).'],
         ];
-        $this->db->table('type_societe')->insertBatch($rows);
+
+        $rows = array_values(array_filter($rows, static fn (array $row): bool => ! in_array($row['code'], $existants, true)));
+
+        if ($rows !== []) {
+            $this->db->table('type_societe')->insertBatch($rows);
+        }
     }
 }

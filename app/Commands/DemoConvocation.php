@@ -43,6 +43,9 @@ class DemoConvocation extends BaseCommand
             CLI::write("Date limite de convocation : {$r['date_convocation']}", 'green');
             CLI::write('Pourquoi : ' . $r['justification']['motif']);
             CLI::write('Statut : ' . \App\Libraries\Justification::STATUTS[$r['justification']['statut']]);
+            if ($r['justification']['precision']) {
+                CLI::write('Précision : ' . $r['justification']['precision']);
+            }
             if ($r['justification']['avertissement']) {
                 CLI::write('Attention : ' . $r['justification']['avertissement'], 'yellow');
             }

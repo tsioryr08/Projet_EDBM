@@ -50,7 +50,7 @@ class DemoAssemblee extends BaseCommand
             ]);
             $this->afficherResolutions($res);
             CLI::write('JSON pour le générateur de PV :', 'cyan');
-            CLI::write(json_encode($service->versJson($q['assemblee_id']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            CLI::write(json_encode($service->versJson($q['assemblee_id']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             CLI::newLine();
 
             // ---------- B. AGE : quorum manqué ----------
@@ -101,6 +101,9 @@ class DemoAssemblee extends BaseCommand
         CLI::write("Voix présentes ou représentées : {$q['voix_presentes_ou_representees']} / {$q['voix_totales']}");
         CLI::write($q['quorum_atteint'] ? 'Quorum ATTEINT' : 'Quorum NON atteint', $q['quorum_atteint'] ? 'green' : 'red');
         $this->afficherJustification($q['justification']);
+        if (! $q['quorum_atteint'] && isset($q['pv_annulation'])) {
+            CLI::write('PV de constat : ' . $q['pv_annulation']['message'], 'yellow');
+        }
         if (isset($q['deuxieme_convocation'])) {
             CLI::write($q['deuxieme_convocation']['message'] . ($q['deuxieme_convocation']['quorum_requis'] ? " (quorum requis : {$q['deuxieme_convocation']['quorum_requis']})" : ''), 'yellow');
         }
@@ -127,6 +130,9 @@ class DemoAssemblee extends BaseCommand
     {
         CLI::write('  Pourquoi : ' . $j['motif']);
         CLI::write('  Source : ' . ($j['source'] ?? 'non renseignée') . ' | ' . Justification::STATUTS[$j['statut']]);
+        if ($j['precision']) {
+            CLI::write('  Précision : ' . $j['precision']);
+        }
         if ($j['avertissement']) {
             CLI::write('  Attention : ' . $j['avertissement'], 'yellow');
         }

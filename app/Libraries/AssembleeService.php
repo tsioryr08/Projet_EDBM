@@ -74,90 +74,17 @@ class AssembleeService
             ?? throw new \RuntimeException("Règle de quorum non renseignée pour {$type['code']} / {$nature} / convocation n°{$numero} (à chercher dans la loi).");
 
         $voixTotales = $this->voixTotales($societe, $nature);
-
-        $convoques = [];
-        foreach ($this->convoques->where('reunion_id', $reunionId)->findAll() as $c) {
-            $convoques[$c['nom_affiche']] = $c;
-        }
-
-        $lignes = [];
-        foreach ($participants as $p) {
-            $nom = $p['nom'];
-            if (! isset($convoques[$nom])) {
-                throw new \RuntimeException("{$nom} n'a pas été convoqué(e) à cette réunion.");
-            }
-            if (isset($lignes[$nom])) {
-                throw new \RuntimeException("{$nom} est saisi(e) deux fois.");
-            }
-            if (! in_array($p['statut'], ['present', 'represente', 'absent'], true)) {
-                throw new \RuntimeException("Statut invalide pour {$nom} : {$p['statut']}");
-            }
-            if ($p['statut'] === 'represente' && empty($p['par'])) {
-                throw new \RuntimeException("{$nom} est représenté(e) : indiquez le mandataire (champ 'par').");
-            }
-            $lignes[$nom] = [
-                'nom' => $nom, 'statut' => $p['statut'], 'par' => $p['par'] ?? null,
-                'voix' => (int) ($p['voix'] ?? $this->voixDe($convoques[$nom], $nature)),
-                'convoque_id' => (int) $convoques[$nom]['id'],
-            ];
-        }
-        foreach ($convoques as $nom => $c) {
-            if (! isset($lignes[$nom])) {
-                $lignes[$nom] = ['nom' => $nom, 'statut' => 'absent', 'par' => null,
-                    'voix' => $this->voixDe($c, $nature), 'convoque_id' => (int) $c['id']];
-            }
-        }
-
+        $lignes      = $this->construireLignesParticipants($participants, $this->convoques->where('reunion_id', $reunionId)->findAll(), $nature);
         $quorumAtteint = $this->calcul->calculerQuorum($lignes, $regle, $voixTotales);
-        $voixPresentes = 0;
-        foreach ($lignes as $l) {
-            if ($l['statut'] !== 'absent') {
-                $voixPresentes += $l['voix'];
-            }
-        }
+        $voixPresentes = $this->totalVoixPresentes($lignes);
         $justification = $this->justif->quorum($regle, $voixPresentes, $voixTotales, $quorumAtteint);
 
         $db = db_connect();
         $db->transBegin();
         try {
-            $assembleeId = $this->verifierInsertion($this->assemblees->insert([
-                'reunion_id'                     => $reunionId,
-                'date_tenue'                     => $dateTenue ?? $reunion['date_reunion'],
-                'president_seance'               => $president,
-                'secretaire'                     => $secretaire,
-                'voix_totales'                   => $voixTotales,
-                'voix_presentes_ou_representees' => $voixPresentes,
-                'quorum_requis_num'              => $regle['quorum_num'],
-                'quorum_requis_den'              => $regle['quorum_den'],
-                'quorum_atteint'                 => $quorumAtteint ? 1 : 0,
-                'motif_quorum'                   => $justification['motif'],
-            ]), 'assemblée');
-
-            $ids = [];
-            foreach ($lignes as $nom => $l) {
-                $ids[$nom] = $this->verifierInsertion($this->participants->insert([
-                    'assemblee_id' => $assembleeId, 'convoque_id' => $l['convoque_id'],
-                    'nom' => $nom, 'statut' => $l['statut'], 'voix' => $l['voix'],
-                ]), "participant {$nom}");
-            }
-
-            $existants = [];
-            foreach ($lignes as $nom => $l) {
-                if ($l['statut'] !== 'represente') {
-                    continue;
-                }
-                if (! isset($ids[$l['par']]) || $lignes[$l['par']]['statut'] !== 'present') {
-                    throw new \RuntimeException("Le mandataire de {$nom} ({$l['par']}) doit être présent(e) à la réunion.");
-                }
-                if (! $this->calcul->procurationValide($nature, (int) $ids[$nom], (int) $ids[$l['par']], $existants)) {
-                    throw new \RuntimeException("Procuration refusée : {$nom} représenté(e) par {$l['par']} (une seule procuration par mandataire au conseil d'administration, art. 485).");
-                }
-                $existants[] = ['mandant_id' => $ids[$nom], 'mandataire_id' => $ids[$l['par']]];
-                $this->verifierInsertion($this->pouvoirs->insert([
-                    'assemblee_id' => $assembleeId, 'mandant_id' => $ids[$nom], 'mandataire_id' => $ids[$l['par']],
-                ]), "procuration de {$nom}");
-            }
-
+            $assembleeId = $this->créerAssemblee($reunionId, $dateTenue, $president, $secretaire, $voixTotales, $voixPresentes, $regle, $quorumAtteint, $justification);
+            $ids = $this->enregistrerParticipants($assembleeId, $lignes);
+            $this->enregistrerPouvoirs($assembleeId, $lignes, $nature, $ids);
             $this->reunions->update($reunionId, ['statut' => $quorumAtteint ? 'tenue' : 'sans_quorum']);
             $db->transCommit();
         } catch (\Throwable $e) {
@@ -174,6 +101,12 @@ class AssembleeService
             'source'         => $regle['source'],
             'verifie'        => (bool) $regle['verifie'],
             'justification'  => $justification,
+            'pv_annulation'  => $quorumAtteint
+                ? null
+                : [
+                    'type' => 'constat_non_quorum',
+                    'message' => "Le quorum n'est pas atteint : la séance est constatée comme annulée pour défaut de quorum. Un procès-verbal de constat ou d'annulation doit être dressé.",
+                ],
         ];
 
         if (! $quorumAtteint) {
@@ -189,6 +122,119 @@ class AssembleeService
         }
 
         return $resume;
+    }
+
+    private function construireLignesParticipants(array $participants, array $convoques, string $nature): array
+    {
+        $listeParNom = [];
+        foreach ($convoques as $c) {
+            $listeParNom[$c['nom_affiche']] = $c;
+        }
+
+        $lignes = [];
+        foreach ($participants as $p) {
+            $nom = $p['nom'];
+            if (! isset($listeParNom[$nom])) {
+                throw new \RuntimeException("{$nom} n'a pas été convoqué(e) à cette réunion.");
+            }
+            if (isset($lignes[$nom])) {
+                throw new \RuntimeException("{$nom} est saisi(e) deux fois.");
+            }
+            $this->validerParticipant($nom, $p, $nature);
+            $lignes[$nom] = [
+                'nom' => $nom, 'statut' => $p['statut'], 'par' => $p['par'] ?? null,
+                'voix' => (int) ($p['voix'] ?? $this->voixDe($listeParNom[$nom], $nature)),
+                'convoque_id' => (int) $listeParNom[$nom]['id'],
+            ];
+        }
+
+        foreach ($listeParNom as $nom => $c) {
+            if (! isset($lignes[$nom])) {
+                $lignes[$nom] = [
+                    'nom' => $nom,
+                    'statut' => 'absent',
+                    'par' => null,
+                    'voix' => $this->voixDe($c, $nature),
+                    'convoque_id' => (int) $c['id'],
+                ];
+            }
+        }
+
+        return $lignes;
+    }
+
+    private function validerParticipant(string $nom, array $p, string $nature): void
+    {
+        if (! in_array($p['statut'], ['present', 'represente', 'absent'], true)) {
+            throw new \RuntimeException("Statut invalide pour {$nom} : {$p['statut']}");
+        }
+        if ($p['statut'] === 'represente' && empty($p['par'])) {
+            throw new \RuntimeException("{$nom} est représenté(e) : indiquez le mandataire (champ 'par').");
+        }
+    }
+
+    private function totalVoixPresentes(array $lignes): int
+    {
+        $total = 0;
+        foreach ($lignes as $ligne) {
+            if ($ligne['statut'] !== 'absent') {
+                $total += $ligne['voix'];
+            }
+        }
+        return $total;
+    }
+
+    private function créerAssemblee(int $reunionId, ?string $dateTenue, ?string $president, ?string $secretaire, int $voixTotales, int $voixPresentes, array $regle, bool $quorumAtteint, array $justification): int
+    {
+        return $this->verifierInsertion($this->assemblees->insert([
+            'reunion_id'                     => $reunionId,
+            'date_tenue'                     => $dateTenue ?? $this->reunions->find($reunionId)['date_reunion'],
+            'president_seance'               => $president,
+            'secretaire'                     => $secretaire,
+            'voix_totales'                   => $voixTotales,
+            'voix_presentes_ou_representees' => $voixPresentes,
+            'quorum_requis_num'              => $regle['quorum_num'],
+            'quorum_requis_den'              => $regle['quorum_den'],
+            'quorum_atteint'                 => $quorumAtteint ? 1 : 0,
+            'motif_quorum'                   => $justification['motif'],
+        ]), 'assemblée');
+    }
+
+    private function enregistrerParticipants(int $assembleeId, array $lignes): array
+    {
+        $ids = [];
+        foreach ($lignes as $nom => $ligne) {
+            $ids[$nom] = $this->verifierInsertion($this->participants->insert([
+                'assemblee_id' => $assembleeId,
+                'convoque_id' => $ligne['convoque_id'],
+                'nom' => $nom,
+                'statut' => $ligne['statut'],
+                'voix' => $ligne['voix'],
+            ]), "participant {$nom}");
+        }
+        return $ids;
+    }
+
+    private function enregistrerPouvoirs(int $assembleeId, array $lignes, string $nature, array $ids): void
+    {
+        $existants = [];
+        foreach ($lignes as $nom => $ligne) {
+            if ($ligne['statut'] !== 'represente') {
+                continue;
+            }
+            if (! isset($ids[$ligne['par']]) || $lignes[$ligne['par']]['statut'] !== 'present') {
+                throw new \RuntimeException("Le mandataire de {$nom} ({$ligne['par']}) doit être présent(e) à la réunion.");
+            }
+            if (! $this->calcul->procurationValide($nature, (int) $ids[$nom], (int) $ids[$ligne['par']], $existants)) {
+                throw new \RuntimeException("Procuration refusée : {$nom} représenté(e) par {$ligne['par']} (une seule procuration par mandataire au conseil d'administration, art. 485).");
+            }
+            $existants[] = ['mandant_id' => $ids[$nom], 'mandataire_id' => $ids[$ligne['par']]];
+            $this->verifierInsertion($this->pouvoirs->insert([
+                'assemblee_id' => $assembleeId,
+                'mandant_id' => $ids[$nom],
+                'mandataire_id' => $ids[$ligne['par']],
+            ]), "procuration de {$nom}");
+        }
     }
 
     /**
@@ -232,12 +278,14 @@ class AssembleeService
             [$adoptee, $enAttente, $prepUtilisee] = $this->decider($regle, $voix, $voixPresentes, $sensPresident);
             $justification = $this->justif->adoption($regle, $voix, $this->baseMajorite($regle, $voix, $voixPresentes), $adoptee, $sensPresident);
 
+            $adopteeBinaire = $adoptee === null ? null : ($adoptee ? 1 : 0);
+
             $this->resolutions->insert([
                 'assemblee_id' => $assembleeId, 'numero' => $numero, 'texte' => $r['texte'],
                 'voix_pour' => $voix['pour'], 'voix_contre' => $voix['contre'],
                 'abstentions' => $voix['abstention'], 'voix_blanches' => $voix['blanc'],
                 'majorite_requise_num' => $regle['majorite_num'], 'majorite_requise_den' => $regle['majorite_den'],
-                'adoptee' => $adoptee === null ? null : ($adoptee ? 1 : 0),
+                'adoptee' => $adopteeBinaire,
                 'sens_vote_president' => $sensPresident,
                 'voix_preponderante_utilisee' => $prepUtilisee ? 1 : 0,
                 'motif' => $justification['motif'],
@@ -356,6 +404,10 @@ class AssembleeService
             'quorum_requis'      => $assemblee['quorum_requis_num'] . '/' . $assemblee['quorum_requis_den'],   // ex. "1/4"
             'quorum_atteint'     => (bool) $assemblee['quorum_atteint'],
             'motif_quorum'       => $assemblee['motif_quorum'],
+            'pv_constat'         => (bool) $assemblee['quorum_atteint'] ? null : [
+                'type' => 'constat_non_quorum',
+                'message' => "Le quorum n'est pas atteint : la séance est constatée comme annulée. Un procès-verbal de constat ou d'annulation est dressé pour formaliser le défaut de quorum.",
+            ],
             // --- majorité (null si « à chercher ») ---
             'majorite_requise'   => $regle['majorite_num'] !== null ? $regle['majorite_num'] . '/' . $regle['majorite_den'] : null,
             'majorite_stricte'   => $regle['majorite_stricte'] !== null ? (bool) $regle['majorite_stricte'] : null, // true : « plus de » ; false : « au moins »

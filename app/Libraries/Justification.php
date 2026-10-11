@@ -8,7 +8,8 @@ namespace App\Libraries;
  *   motif          : phrase qui explique le résultat
  *   source         : article / texte (colonne "source" de la règle)
  *   statut         : verifie | a_confirmer | deduction
- *   avertissement  : précision éventuelle (choix du projet, point à confirmer) ou null
+ *   avertissement  : point d'attention (choix du projet, point à confirmer) ou null
+ *   precision      : simple précision tirée de la règle (colonne "note"), sans alerte, ou null
  *   texte_officiel : passage de la loi recopié en base (ou null s'il n'est pas encore saisi)
  *
  * PHP pur : aucune dépendance CI4. Les chiffres viennent des règles en base, rien n'est écrit en dur.
@@ -42,6 +43,7 @@ class Justification
             'avertissement' => $mode === 'franc'
                 ? "Le mode de calcul en jours francs est un choix du projet : les articles lus disent seulement « quinze jours au moins »."
                 : null,
+            'precision'      => $regle['note'] ?? null,
             'texte_officiel' => $regle['texte_officiel'] ?? null,
         ];
     }
@@ -62,7 +64,9 @@ class Justification
             $pct   = $totaux > 0 ? round($presentes * 100 / $totaux, 1) : 0;
             $motif = 'Quorum requis : ' . $this->exigence((int) $regle['quorum_num'], (int) $regle['quorum_den'], false) . " {$base}. "
                    . "Présents ou représentés : {$presentes} sur {$totaux} ({$pct} %). "
-                   . ($atteint ? 'Le quorum est atteint : l\'assemblée peut délibérer.' : "Le quorum n'est pas atteint : l'assemblée ne peut pas délibérer.");
+                   . ($atteint
+                       ? 'Le quorum est atteint : l\'assemblée peut délibérer.'
+                       : "Le quorum n'est pas atteint : l'assemblée ne peut pas délibérer. Un procès-verbal de constat de non-quorum doit être dressé et la séance est réputée annulée pour défaut de quorum.");
         }
 
         return [
@@ -70,6 +74,7 @@ class Justification
             'source'         => $regle['source'] ?? null,
             'statut'         => $statut,
             'avertissement'  => $this->avertissementsQuorum($regle, $totaux),
+            'precision'      => $regle['note'] ?? null,
             'texte_officiel' => $regle['texte_officiel'] ?? null,
         ];
     }
@@ -77,9 +82,6 @@ class Justification
     private function avertissementsQuorum(array $regle, int $totaux): ?string
     {
         $av = [];
-        if (! empty($regle['note'])) {
-            $av[] = $regle['note'] . '.';
-        }
         if ($regle['quorum_base'] === 'membres_conseil') {
             $av[] = "À confirmer : le texte parle des membres « présents » ; on compte ici aussi les membres représentés.";
             if ($totaux > 0 && $totaux % 2 === 0) {
@@ -99,7 +101,6 @@ class Justification
     {
         $statut = ! empty($regle['verifie']) ? 'verifie' : 'a_confirmer';
         $avert  = null;
-
         $voixLabel = $regle['majorite_base'] === 'voix_exprimees'
             ? 'des voix exprimées'
             : 'des voix des membres présents ou représentés';
@@ -109,25 +110,8 @@ class Justification
                . "Majorité exigée : {$exig} {$voixLabel}. ";
 
         $egalite = $voix['pour'] === $voix['contre'] && $voix['pour'] > 0;
-
-        if ($egalite && (int) $regle['voix_preponderante_president'] === 1) {
-            $motif .= "Partage des voix : la voix du président de séance est prépondérante, sauf disposition contraire des statuts. ";
-            if ($sensPresident === null) {
-                $motif .= "Décision en attente : indiquez le sens du vote du président de séance.";
-            } elseif ($sensPresident === 'abstention') {
-                $statut = 'deduction';
-                $motif .= "Le président de séance s'est abstenu ou était absent : sa voix prépondérante n'est pas exercée et la résolution n'est pas adoptée (déduction : le texte ne le dit pas expressément).";
-            } else {
-                $motif .= "Le président de séance a voté « {$sensPresident} » : sa voix l'emporte, la résolution est " . ($adoptee ? 'adoptée.' : 'non adoptée.');
-            }
-        } else {
-            $motif .= 'Résolution ' . ($adoptee ? 'adoptée.' : 'non adoptée.');
-            if ($egalite) {
-                // Le texte ne parle pas de l'égalité : on le dit honnêtement.
-                $statut = 'deduction';
-                $motif .= " L'égalité des voix ne donne pas la majorité exigée : c'est une conséquence de la règle, le texte ne prévoit pas de départage dans ce cas.";
-            }
-        }
+        $motif = $this->ajouterMotifAdoption($motif, $regle, $egalite, $adoptee, $sensPresident, $statut);
+        $statut = $this->corrigerStatutAdoption($regle, $egalite, $statut, $sensPresident);
 
         if ($regle['majorite_base'] === 'voix_exprimees' && ($voix['abstention'] ?? 0) > 0) {
             $avert = "Les abstentions ne sont pas comptées dans les voix exprimées (point à confirmer).";
@@ -138,8 +122,43 @@ class Justification
             'source'         => $regle['source'] ?? null,
             'statut'         => $statut,
             'avertissement'  => $avert,
+            'precision'      => null,
             'texte_officiel' => $regle['texte_officiel'] ?? null,
         ];
+    }
+
+    private function ajouterMotifAdoption(string $motif, array $regle, bool $egalite, ?bool $adoptee, ?string $sensPresident, string $statut): string
+    {
+        if ($egalite && (int) $regle['voix_preponderante_president'] === 1) {
+            $motif .= "Partage des voix : la voix du président de séance est prépondérante, sauf disposition contraire des statuts. ";
+            if ($sensPresident === null) {
+                return $motif . 'Décision en attente : indiquez le sens du vote du président de séance.';
+            }
+            if ($sensPresident === 'abstention') {
+                return $motif . "Le président de séance s'est abstenu ou était absent : sa voix prépondérante n'est pas exercée et la résolution n'est pas adoptée (déduction : le texte ne le dit pas expressément).";
+            }
+            return $motif . "Le président de séance a voté « {$sensPresident} » : sa voix l'emporte, la résolution est " . ($adoptee ? 'adoptée.' : 'non adoptée.');
+        }
+
+        $motif .= 'Résolution ' . ($adoptee ? 'adoptée.' : 'non adoptée.');
+        if ($egalite) {
+            return $motif . " L'égalité des voix ne donne pas la majorité exigée : c'est une conséquence de la règle, le texte ne prévoit pas de départage dans ce cas.";
+        }
+
+        return $motif;
+    }
+
+    private function corrigerStatutAdoption(array $regle, bool $egalite, string $statut, ?string $sensPresident): string
+    {
+        if ($egalite && (int) $regle['voix_preponderante_president'] === 1 && $sensPresident === 'abstention') {
+            return 'deduction';
+        }
+
+        if ($egalite && ! (int) $regle['voix_preponderante_president']) {
+            return 'deduction';
+        }
+
+        return $statut;
     }
 
     // ---------------------------------------------------------------

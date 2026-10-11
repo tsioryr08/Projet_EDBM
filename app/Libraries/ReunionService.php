@@ -56,12 +56,22 @@ class ReunionService
         ?string $modeCalcul = null,
         ?int $delaiStatuts = null,
         bool $enregistrer = true,
+        ?int $reunionPrecedenteId = null,
     ): array {
         $societe = $this->societes->find($societeId);
         if (! $societe) {
             throw new \RuntimeException("Société #{$societeId} introuvable.");
         }
         $type = $this->types->find($societe['type_societe_id']);
+
+        if ($reunionPrecedenteId !== null) {
+            $precedente = $this->reunions->find($reunionPrecedenteId);
+            if (! $precedente) {
+                throw new \RuntimeException("Réunion précédente #{$reunionPrecedenteId} introuvable.");
+            }
+            $numeroConvocation = 2;
+            $nature = $precedente['nature_code'];
+        }
 
         $regle = $this->delais->trouver((int) $societe['type_societe_id'], $nature, $numeroConvocation);
         if (! $regle) {
@@ -71,6 +81,9 @@ class ReunionService
         }
 
         $delai = $regle['delai_jours'] !== null ? (int) $regle['delai_jours'] : $delaiStatuts;
+        if ($numeroConvocation === 2 && $delai !== 6) {
+            $delai = 6;
+        }
         if ($delai === null) {
             throw new \RuntimeException("Le délai de {$nature} est fixé par les statuts : indiquez-le (paramètre delaiStatuts).");
         }
@@ -85,20 +98,21 @@ class ReunionService
         $dateConvocation = $this->calcul->calculerDateConvocation($dateReunion, $delai, $mode, $joursFeries);
 
         $resultat = [
-            'societe'          => $societe['denomination'],
-            'type'             => $type['code'],
-            'nature'           => $nature,
-            'numero_convocation' => $numeroConvocation,
-            'date_reunion'     => $dateReunion,
-            'heure'            => $heure,
-            'lieu'             => $lieu,
-            'ordre_du_jour'    => array_values($ordreDuJour),
-            'delai_jours'      => $delai,
-            'mode_calcul'      => $mode,
-            'date_convocation' => $dateConvocation->format('Y-m-d'),
-            'forme_envoi'      => $regle['forme_envoi'],
-            'source'           => $regle['source'],
-            'verifie'          => (bool) $regle['verifie'],
+            'societe'             => $societe['denomination'],
+            'type'                => $type['code'],
+            'nature'              => $nature,
+            'numero_convocation'  => $numeroConvocation,
+            'reunion_precedente_id' => $reunionPrecedenteId,
+            'date_reunion'        => $dateReunion,
+            'heure'               => $heure,
+            'lieu'                => $lieu,
+            'ordre_du_jour'       => array_values($ordreDuJour),
+            'delai_jours'         => $delai,
+            'mode_calcul'         => $mode,
+            'date_convocation'    => $dateConvocation->format('Y-m-d'),
+            'forme_envoi'         => $regle['forme_envoi'],
+            'source'              => $regle['source'],
+            'verifie'             => (bool) $regle['verifie'],
             // explication juridique : motif, source, statut, avertissement, texte officiel
             'justification'    => (new Justification())->delai($regle, $dateReunion, $dateConvocation->format('Y-m-d'), $mode, $delai),
             // true si la date limite d'envoi est déjà passée
@@ -113,17 +127,18 @@ class ReunionService
         $db->transStart();
 
         $reunionId = $this->reunions->insert([
-            'societe_id'         => $societeId,
-            'nature_code'        => $nature,
-            'numero_convocation' => $numeroConvocation,
-            'date_reunion'       => $dateReunion,
-            'heure'              => $heure,
-            'lieu'               => $lieu,
-            'ordre_du_jour'      => json_encode($ordreDuJour, JSON_UNESCAPED_UNICODE),
-            'mode_calcul_delai'  => $mode,
-            'delai_applique'     => $delai,
-            'date_convocation'   => $resultat['date_convocation'],
-            'statut'             => 'planifiee',
+            'societe_id'           => $societeId,
+            'nature_code'          => $nature,
+            'numero_convocation'   => $numeroConvocation,
+            'reunion_precedente_id' => $reunionPrecedenteId,
+            'date_reunion'         => $dateReunion,
+            'heure'                => $heure,
+            'lieu'                 => $lieu,
+            'ordre_du_jour'        => json_encode($ordreDuJour, JSON_UNESCAPED_UNICODE),
+            'mode_calcul_delai'    => $mode,
+            'delai_applique'       => $delai,
+            'date_convocation'     => $resultat['date_convocation'],
+            'statut'               => 'planifiee',
         ]);
 
         $resultat['reunion_id'] = $reunionId;

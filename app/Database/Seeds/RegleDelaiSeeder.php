@@ -30,11 +30,31 @@ class RegleDelaiSeeder extends Seeder
             [$t['SA'], 'CA', 1, null, null, 'Loi 2003-036, art. 482', 1, 'Délai fixé par les statuts ; convocation par le président'],
             [$t['SARL'], 'AGO', 1, 15, 'Lettre recommandée', 'Décret 2004-453, art. 21', 0, 'À reconfirmer après les modifications du décret 2005-151'],
             [$t['SARL'], 'AGE', 1, 15, 'Lettre recommandée', 'Décret 2004-453, art. 21', 0, 'À reconfirmer après les modifications du décret 2005-151'],
-            // À CHERCHER : SNC, SCS, SCA, SC ; AGC en 2e convocation ; SARLU (décisions de l'associé unique).
+            [$t['SNC'], 'AGO', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SNC à chercher'],
+            [$t['SNC'], 'AGE', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SNC à chercher'],
+            [$t['SCS'], 'AGO', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SCS à chercher'],
+            [$t['SCS'], 'AGE', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SCS à chercher'],
+            [$t['SCA'], 'AGO', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SCA à chercher'],
+            [$t['SCA'], 'AGE', 1, null, null, 'Loi 2003-036, à chercher', 0, 'Délai de convocation de la SCA à chercher'],
+            [$t['SC'], 'AGO', 1, null, null, 'Loi 2001-026, à chercher', 0, 'Délai de convocation de la SC à chercher'],
+            [$t['SC'], 'AGE', 1, null, null, 'Loi 2001-026, à chercher', 0, 'Délai de convocation de la SC à chercher'],
+            [$t['SARLU'], 'AGO', 1, null, null, 'Loi 2003-036, SARLU – à chercher', 0, 'Délai de convocation de la SARLU à chercher'],
+            [$t['SARLU'], 'AGE', 1, null, null, 'Loi 2003-036, SARLU – à chercher', 0, 'Délai de convocation de la SARLU à chercher'],
         ];
+
+        $existants = $this->db->table('regle_delai')->get()->getResultArray();
+        $clefs = [];
+        foreach ($existants as $ligne) {
+            $clefs[$ligne['type_societe_id'] . ':' . $ligne['nature_code'] . ':' . $ligne['numero_convocation']] = true;
+        }
 
         $data = [];
         foreach ($rows as [$type, $nature, $num, $delai, $forme, $source, $verifie, $note]) {
+            $clef = $type . ':' . $nature . ':' . $num;
+            if (isset($clefs[$clef])) {
+                continue;
+            }
+
             $data[] = [
                 'type_societe_id'    => $type,
                 'nature_code'        => $nature,
@@ -47,6 +67,9 @@ class RegleDelaiSeeder extends Seeder
                 'note'               => $note,
             ];
         }
-        $this->db->table('regle_delai')->insertBatch($data);
+
+        if ($data !== []) {
+            $this->db->table('regle_delai')->insertBatch($data);
+        }
     }
 }

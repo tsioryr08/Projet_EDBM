@@ -55,18 +55,28 @@ class DocumentRequisSeeder extends Seeder
             ['MANDAT_CIN', 'mandataire', 'Copie CIN du mandataire', 'mandataire', null, 0, null],
         ];
 
+        $existantsDoc = array_column($this->db->table('document_requis')->select('code')->get()->getResultArray(), 'code');
         $data = [];
         foreach ($docs as [$code, $cat, $libelle, $cond, $validite, $modele, $note]) {
+            if (in_array($code, $existantsDoc, true)) {
+                continue;
+            }
             $data[] = [
                 'code' => $code, 'categorie' => $cat, 'libelle' => $libelle, 'condition_code' => $cond,
                 'validite_mois' => $validite, 'modele_disponible' => $modele, 'note' => $note,
             ];
         }
-        $this->db->table('document_requis')->insertBatch($data);
+        if ($data !== []) {
+            $this->db->table('document_requis')->insertBatch($data);
+        }
 
         // ---- Pivot : quel document pour quel type ----
         $docId  = array_column($this->db->table('document_requis')->get()->getResultArray(), 'id', 'code');
         $typeId = array_column($this->db->table('type_societe')->get()->getResultArray(), 'id', 'code');
+        $existantsPivot = [];
+        foreach ($this->db->table('document_type_societe')->get()->getResultArray() as $ligne) {
+            $existantsPivot[$ligne['document_id'] . ':' . $ligne['type_societe_id']] = true;
+        }
 
         $communs = ['ASSOC_ID', 'ASSOC_FISC', 'ASSOC_MORALE_ETR', 'ASSOC_MORALE_MG',
                     'DIR_ID', 'DIR_RESID', 'DIR_DECL',
@@ -78,11 +88,9 @@ class DocumentRequisSeeder extends Seeder
         foreach ($communs as $c) {
             $map[$c] = ['SA', 'SARL', 'SARLU', 'SCS', 'SNC', 'SC']; // SCA : à chercher
         }
-        // Mineur non émancipé : listé pour tous sauf la SNC
         $map['ASSOC_MINEUR']          = ['SA', 'SARL', 'SARLU', 'SCS', 'SC'];
-        // Documents propres à certains types
         $map['STATUTS_SARL']          = ['SARL', 'SARLU'];
-        $map['PV_NOMINATION_GERANTS'] = ['SARL']; // à vérifier : SARLU aussi ?
+        $map['PV_NOMINATION_GERANTS'] = ['SARL'];
         foreach (['STATUTS_SA_AG', 'STATUTS_SA_CA', 'PV_CA', 'ATTESTATION_BLOCAGE', 'CAC_LISTE', 'CAC_PHYSIQUE', 'CAC_MORALE'] as $c) {
             $map[$c] = ['SA'];
         }
@@ -96,9 +104,19 @@ class DocumentRequisSeeder extends Seeder
         $pivot = [];
         foreach ($map as $code => $types) {
             foreach ($types as $tc) {
-                $pivot[] = ['document_id' => $docId[$code], 'type_societe_id' => $typeId[$tc]];
+                $docKey = $docId[$code];
+                $typeKey = $typeId[$tc];
+                $clef = $docKey . ':' . $typeKey;
+                if (isset($existantsPivot[$clef])) {
+                    continue;
+                }
+                $pivot[] = ['document_id' => $docKey, 'type_societe_id' => $typeKey];
+                $existantsPivot[$clef] = true;
             }
         }
-        $this->db->table('document_type_societe')->insertBatch($pivot);
+
+        if ($pivot !== []) {
+            $this->db->table('document_type_societe')->insertBatch($pivot);
+        }
     }
 }
