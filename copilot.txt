@@ -15,3 +15,11 @@ Quorums : fractions entières (num/den), calcul en arithmétique entière.
 DÉJÀ FAIT : 22 tables (migrations), seeders des règles, CalculRegles (app/Libraries), ReunionService::planifier() qui lit regle_delai, calcule et enregistre la réunion.
 
 TÂCHE : (écris ici ce que tu veux)
+
+
+
+Tu dois faire 3 choses seulement :
+
+Valider les règles juridiques
+Les écrire dans les tables de règles
+Vérifier le calcul avec des cas de test

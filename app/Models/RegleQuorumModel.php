@@ -10,7 +10,7 @@ class RegleQuorumModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
-    protected $allowedFields = ['type_societe_id', 'nature_code', 'numero_convocation', 'quorum_base', 'quorum_num', 'quorum_den', 'majorite_base', 'majorite_num', 'majorite_den', 'majorite_stricte', 'voix_preponderante_president', 'source', 'verifie', 'note'];
+    protected $allowedFields = ['type_societe_id', 'nature_code', 'numero_convocation', 'quorum_base', 'quorum_num', 'quorum_den', 'majorite_base', 'majorite_num', 'majorite_den', 'majorite_stricte', 'voix_preponderante_president', 'source', 'verifie', 'note', 'texte_officiel'];
 
     public function trouver(int $typeSocieteId, string $nature, int $numeroConvocation): ?array
     {

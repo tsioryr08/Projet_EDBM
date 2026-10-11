@@ -55,3 +55,43 @@ CE QUI RESTE (par moi, sauf mention).
 5) Lot 5 : interface, ensemble.
 
 CONSIGNES : ne mets aucun délai, quorum ou majorité en dur ; lis-les en base. Si une règle manque, signale-le au lieu de l'inventer. Dis-moi si le format des données te pose problème ou si tu veux un autre champ.
+
+
+
+
+Les règles du CA : le texte
+
+J’ai relu le guide du Trésor, qui reprend les articles de la loi 2003-036 en toutes lettres. Ce que dit le texte ne correspond pas tout à fait à ce que tu décris.
+
+Nombre impair : non, pas dans la loi. L’article 439 prévoit un conseil de trois membres au moins et de douze au plus, sans exiger un nombre impair. C’est une bonne pratique pour éviter les égalités, mais rien ne l’impose, et une égalité reste possible dès qu’un membre est absent. Le logiciel peut afficher un avertissement, pas un blocage. 
+tresorpublic
+
+Le président ne vote pas sauf en cas d’égalité : ce n’est pas ce que dit l’article 483. Voici ce qu’il prévoit :
+
+Les décisions se prennent à la majorité des membres présents ou représentés, à moins que les statuts prévoient une majorité plus forte. 
+tresorpublic
+En cas de partage des voix, la voix du président de séance est prépondérante, sauf dispositions contraires des statuts. 
+tresorpublic
+
+Le président est donc un membre comme les autres, il vote normalement, et sa voix ne départage que s’il y a égalité. C’est la lecture la plus naturelle du texte, mais le guide ne détaille pas ce point : je la marque comme déduction.
+
+Les deux modèles donnent des résultats différents. Exemple avec 4 administrateurs présents, dont le président qui vote « pour » :
+
+Selon la loi : pour 2 (président + 1), contre 2, c’est un partage des voix, donc la voix du président l’emporte et la résolution est adoptée.
+Selon ton modèle : le président ne vote pas, donc pour 1 contre 2, la résolution est rejetée.
+
+D’où vient ton idée ? Probablement de l’article 508, qui dit que le président ne participe pas au vote, mais seulement quand le conseil fixe sa propre rémunération. L’article 466 ajoute une règle voisine pour un administrateur intéressé par une convention : il ne vote pas sur son autorisation. 
+tresorpublic
+
+Dans l’AG, c’est différent. Je n’ai trouvé aucune voix prépondérante du président pour l’AG. On vote par actions, à la majorité des voix exprimées : une égalité veut donc dire que la résolution n’est pas adoptée (déduction). Garde la règle de la voix prépondérante pour le CA seulement.
+
+À noter aussi : c’est le président de séance qui a cette voix, pas forcément le président du conseil (l’article 509 permet au CA de déléguer un membre pour présider en cas d’empêchement). Les statuts peuvent aussi écarter la règle, donc voix_preponderante_president reste un paramètre.
+
+Pour ta fonction resolutionAdoptee() au CA :
+
+Le vote du président compte comme celui des autres.
+Si pour = contre et que la voix prépondérante est activée : adoptée si le président de séance a voté « pour », rejetée s’il a voté « contre ».
+S’il s’est abstenu ou est absent : rejetée (déduction).
+Le PV doit mentionner « voix prépondérante du président, art. 483 ».
+
+Un point à vérifier dans ton code : l’article 483 parle de la moitié des membres présents pour le quorum, sans dire si les représentés comptent. À confirmer avant de les compter.

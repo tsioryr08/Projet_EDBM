@@ -92,12 +92,15 @@ class ReunionService
             'date_reunion'     => $dateReunion,
             'heure'            => $heure,
             'lieu'             => $lieu,
+            'ordre_du_jour'    => array_values($ordreDuJour),
             'delai_jours'      => $delai,
             'mode_calcul'      => $mode,
             'date_convocation' => $dateConvocation->format('Y-m-d'),
             'forme_envoi'      => $regle['forme_envoi'],
             'source'           => $regle['source'],
             'verifie'          => (bool) $regle['verifie'],
+            // explication juridique : motif, source, statut, avertissement, texte officiel
+            'justification'    => (new Justification())->delai($regle, $dateReunion, $dateConvocation->format('Y-m-d'), $mode, $delai),
             // true si la date limite d'envoi est déjà passée
             'en_retard'        => $dateConvocation < new DateTimeImmutable('today'),
         ];

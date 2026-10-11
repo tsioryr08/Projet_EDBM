@@ -17,10 +17,12 @@ use App\Models\TypeSocieteModel;
 /**
  * Jour J d'une réunion : participants, procurations, quorum, résolutions, adoption.
  * Quorum et majorité sont lus dans regle_quorum (jamais en dur).
+ * Chaque décision est accompagnée de sa justification juridique (Justification).
  */
 class AssembleeService
 {
     private CalculRegles $calcul;
+    private Justification $justif;
     private ReunionModel $reunions;
     private SocieteModel $societes;
     private TypeSocieteModel $types;
@@ -36,6 +38,7 @@ class AssembleeService
     public function __construct()
     {
         $this->calcul       = new CalculRegles();
+        $this->justif       = new Justification();
         $this->reunions     = new ReunionModel();
         $this->societes     = new SocieteModel();
         $this->types        = new TypeSocieteModel();
@@ -52,10 +55,8 @@ class AssembleeService
     /**
      * Enregistre la tenue de la réunion et vérifie le quorum.
      *
-     * @param array $participants lignes ['nom' => ..., 'statut' => present|represente|absent, 'par' => nom du mandataire (si represente), 'voix' => optionnel]
+     * @param array $participants lignes ['nom', 'statut' => present|represente|absent, 'par' => mandataire (si represente), 'voix' => optionnel]
      *                            Les convoqués non listés sont ajoutés comme absents. Les voix viennent de la base (nb_titres) sauf indication.
-     *
-     * @return array résumé du quorum (+ proposition de 2e convocation si non atteint)
      */
     public function tenir(int $reunionId, array $participants, ?string $president = null, ?string $secretaire = null, ?string $dateTenue = null): array
     {
@@ -74,13 +75,11 @@ class AssembleeService
 
         $voixTotales = $this->voixTotales($societe, $nature);
 
-        // Convoqués de la réunion, par nom
         $convoques = [];
         foreach ($this->convoques->where('reunion_id', $reunionId)->findAll() as $c) {
             $convoques[$c['nom_affiche']] = $c;
         }
 
-        // Construction des lignes de participants
         $lignes = [];
         foreach ($participants as $p) {
             $nom = $p['nom'];
@@ -102,7 +101,6 @@ class AssembleeService
                 'convoque_id' => (int) $convoques[$nom]['id'],
             ];
         }
-        // Convoqués oubliés = absents
         foreach ($convoques as $nom => $c) {
             if (! isset($lignes[$nom])) {
                 $lignes[$nom] = ['nom' => $nom, 'statut' => 'absent', 'par' => null,
@@ -117,11 +115,12 @@ class AssembleeService
                 $voixPresentes += $l['voix'];
             }
         }
+        $justification = $this->justif->quorum($regle, $voixPresentes, $voixTotales, $quorumAtteint);
 
         $db = db_connect();
         $db->transBegin();
         try {
-            $assembleeId = $this->assemblees->insert([
+            $assembleeId = $this->verifierInsertion($this->assemblees->insert([
                 'reunion_id'                     => $reunionId,
                 'date_tenue'                     => $dateTenue ?? $reunion['date_reunion'],
                 'president_seance'               => $president,
@@ -131,17 +130,17 @@ class AssembleeService
                 'quorum_requis_num'              => $regle['quorum_num'],
                 'quorum_requis_den'              => $regle['quorum_den'],
                 'quorum_atteint'                 => $quorumAtteint ? 1 : 0,
-            ]);
+                'motif_quorum'                   => $justification['motif'],
+            ]), 'assemblée');
 
             $ids = [];
             foreach ($lignes as $nom => $l) {
-                $ids[$nom] = $this->participants->insert([
+                $ids[$nom] = $this->verifierInsertion($this->participants->insert([
                     'assemblee_id' => $assembleeId, 'convoque_id' => $l['convoque_id'],
                     'nom' => $nom, 'statut' => $l['statut'], 'voix' => $l['voix'],
-                ]);
+                ]), "participant {$nom}");
             }
 
-            // Procurations (contrôle : art. 485 au CA, pas d'auto-représentation, un pouvoir par mandant)
             $existants = [];
             foreach ($lignes as $nom => $l) {
                 if ($l['statut'] !== 'represente') {
@@ -154,14 +153,12 @@ class AssembleeService
                     throw new \RuntimeException("Procuration refusée : {$nom} représenté(e) par {$l['par']} (une seule procuration par mandataire au conseil d'administration, art. 485).");
                 }
                 $existants[] = ['mandant_id' => $ids[$nom], 'mandataire_id' => $ids[$l['par']]];
-                $this->pouvoirs->insert([
+                $this->verifierInsertion($this->pouvoirs->insert([
                     'assemblee_id' => $assembleeId, 'mandant_id' => $ids[$nom], 'mandataire_id' => $ids[$l['par']],
-                ]);
+                ]), "procuration de {$nom}");
             }
 
-            if ($quorumAtteint) {
-                $this->reunions->update($reunionId, ['statut' => 'tenue']);
-            }
+            $this->reunions->update($reunionId, ['statut' => $quorumAtteint ? 'tenue' : 'sans_quorum']);
             $db->transCommit();
         } catch (\Throwable $e) {
             $db->transRollback();
@@ -169,13 +166,14 @@ class AssembleeService
         }
 
         $resume = [
-            'assemblee_id'  => $assembleeId,
-            'quorum_requis' => $regle['quorum_num'] . '/' . $regle['quorum_den'],
+            'assemblee_id'   => $assembleeId,
+            'quorum_requis'  => $regle['quorum_num'] . '/' . $regle['quorum_den'],
             'voix_presentes_ou_representees' => $voixPresentes,
-            'voix_totales'  => $voixTotales,
+            'voix_totales'   => $voixTotales,
             'quorum_atteint' => $quorumAtteint,
-            'source'        => $regle['source'],
-            'verifie'       => (bool) $regle['verifie'],
+            'source'         => $regle['source'],
+            'verifie'        => (bool) $regle['verifie'],
+            'justification'  => $justification,
         ];
 
         if (! $quorumAtteint) {
@@ -196,7 +194,13 @@ class AssembleeService
     /**
      * Enregistre les résolutions et calcule l'adoption de chacune.
      *
-     * @param array $resolutions lignes ['texte', 'pour', 'contre', 'abstention', 'blanc'] (nombre de voix)
+     * @param array $resolutions lignes ['texte', 'pour', 'contre', 'abstention', 'blanc',
+     *                           'sens_vote_president' => 'pour'|'contre'|'abstention' (optionnel)]
+     *
+     * Le président de séance vote comme les autres : son vote est déjà compris dans pour/contre.
+     * Partage des voix : si la règle donne la voix prépondérante au président (CA, art. 483), c'est son vote
+     * qui l'emporte ('abstention' = abstenu ou absent -> rejetée). S'il n'est pas encore connu (null),
+     * la résolution est enregistrée « en attente » (adoptee = null) ; utiliser departager().
      */
     public function voter(int $assembleeId, array $resolutions): array
     {
@@ -205,16 +209,10 @@ class AssembleeService
             throw new \RuntimeException("Quorum non atteint : l'assemblée ne peut pas délibérer.");
         }
 
-        $reunion = $this->reunions->find($assemblee['reunion_id']);
-        $societe = $this->societes->find($reunion['societe_id']);
-        $regle   = $this->quorums->trouver((int) $societe['type_societe_id'], $reunion['nature_code'], (int) $reunion['numero_convocation']);
-        if ($regle['majorite_base'] === null) {
-            throw new \RuntimeException("Majorité non renseignée pour {$reunion['nature_code']} (à chercher dans la loi).");
-        }
-
+        $regle         = $this->regleDe($assemblee);
         $voixPresentes = (int) $assemblee['voix_presentes_ou_representees'];
-        $resultats = [];
-        $numero = (int) ($this->resolutions->where('assemblee_id', $assembleeId)->countAllResults()) + 1;
+        $resultats     = [];
+        $numero        = (int) $this->resolutions->where('assemblee_id', $assembleeId)->countAllResults() + 1;
 
         foreach ($resolutions as $r) {
             $voix = [
@@ -224,26 +222,37 @@ class AssembleeService
                 'blanc'      => (int) ($r['blanc'] ?? 0),
             ];
             if (array_sum($voix) > $voixPresentes) {
-                throw new \RuntimeException("Résolution {$numero} : {$voix['pour']}+{$voix['contre']}+... voix dépassent les {$voixPresentes} voix présentes ou représentées.");
+                throw new \RuntimeException("Résolution {$numero} : le total des voix ({$this->somme($voix)}) dépasse les {$voixPresentes} voix présentes ou représentées.");
+            }
+            $sensPresident = $r['sens_vote_president'] ?? null;
+            if (! in_array($sensPresident, [null, 'pour', 'contre', 'abstention'], true)) {
+                throw new \RuntimeException("sens_vote_president doit valoir 'pour', 'contre' ou 'abstention'.");
             }
 
-            $adoptee = $this->calcul->resolutionAdoptee($voix, $regle, $voixPresentes);
+            [$adoptee, $enAttente, $prepUtilisee] = $this->decider($regle, $voix, $voixPresentes, $sensPresident);
+            $justification = $this->justif->adoption($regle, $voix, $this->baseMajorite($regle, $voix, $voixPresentes), $adoptee, $sensPresident);
 
             $this->resolutions->insert([
                 'assemblee_id' => $assembleeId, 'numero' => $numero, 'texte' => $r['texte'],
                 'voix_pour' => $voix['pour'], 'voix_contre' => $voix['contre'],
                 'abstentions' => $voix['abstention'], 'voix_blanches' => $voix['blanc'],
                 'majorite_requise_num' => $regle['majorite_num'], 'majorite_requise_den' => $regle['majorite_den'],
-                'adoptee' => $adoptee ? 1 : 0,
+                'adoptee' => $adoptee === null ? null : ($adoptee ? 1 : 0),
+                'sens_vote_president' => $sensPresident,
+                'voix_preponderante_utilisee' => $prepUtilisee ? 1 : 0,
+                'motif' => $justification['motif'],
+                'source' => $regle['source'],
+                'statut_regle' => $justification['statut'],
             ]);
 
             $resultats[] = [
                 'numero' => $numero, 'texte' => $r['texte'],
                 'pour' => $voix['pour'], 'contre' => $voix['contre'],
                 'majorite_requise' => $regle['majorite_num'] . '/' . $regle['majorite_den'],
-                'adoptee' => $adoptee,
-                // égalité au CA : la voix du président est prépondérante (art. 483) -> décision à saisir par le président
-                'egalite_voix_president' => (int) $regle['voix_preponderante_president'] === 1 && $voix['pour'] === $voix['contre'],
+                'adoptee' => $adoptee,                  // true | false | null (en attente de la voix du président)
+                'en_attente_voix_president' => $enAttente,
+                'voix_preponderante_utilisee' => $prepUtilisee,
+                'justification' => $justification,
             ];
             $numero++;
         }
@@ -251,11 +260,45 @@ class AssembleeService
         return $resultats;
     }
 
+    /**
+     * Départage une résolution restée en attente (partage des voix, art. 483).
+     * $sensPresident : vote du PRÉSIDENT DE SÉANCE ('pour' | 'contre' | 'abstention' = abstenu ou absent).
+     */
+    public function departager(int $assembleeId, int $numeroResolution, string $sensPresident): array
+    {
+        if (! in_array($sensPresident, ['pour', 'contre', 'abstention'], true)) {
+            throw new \RuntimeException("Le sens du vote du président doit être 'pour', 'contre' ou 'abstention'.");
+        }
+        $assemblee  = $this->assemblees->find($assembleeId) ?? throw new \RuntimeException("Assemblée #{$assembleeId} introuvable.");
+        $resolution = $this->resolutions->where(['assemblee_id' => $assembleeId, 'numero' => $numeroResolution])->first()
+            ?? throw new \RuntimeException("Résolution n°{$numeroResolution} introuvable.");
+        if ($resolution['adoptee'] !== null) {
+            throw new \RuntimeException("La résolution n°{$numeroResolution} n'est pas en attente de la voix du président.");
+        }
+
+        $regle = $this->regleDe($assemblee);
+        $voix  = ['pour' => (int) $resolution['voix_pour'], 'contre' => (int) $resolution['voix_contre'],
+                  'abstention' => (int) $resolution['abstentions'], 'blanc' => (int) $resolution['voix_blanches']];
+
+        [$adoptee, , $prepUtilisee] = $this->decider($regle, $voix, (int) $assemblee['voix_presentes_ou_representees'], $sensPresident);
+        $justification = $this->justif->adoption($regle, $voix, $this->baseMajorite($regle, $voix, (int) $assemblee['voix_presentes_ou_representees']), $adoptee, $sensPresident);
+
+        $this->resolutions->update($resolution['id'], [
+            'adoptee' => $adoptee ? 1 : 0, 'sens_vote_president' => $sensPresident,
+            'voix_preponderante_utilisee' => $prepUtilisee ? 1 : 0,
+            'motif' => $justification['motif'], 'source' => $regle['source'], 'statut_regle' => $justification['statut'],
+        ]);
+
+        return ['numero' => $numeroResolution, 'texte' => $resolution['texte'], 'adoptee' => $adoptee,
+                'voix_preponderante_utilisee' => $prepUtilisee, 'justification' => $justification];
+    }
+
     /** Objet « assemblee » du contrat d'interface JSON (entrée du générateur de PV). */
     public function versJson(int $assembleeId): array
     {
         $assemblee = $this->assemblees->find($assembleeId) ?? throw new \RuntimeException("Assemblée #{$assembleeId} introuvable.");
-        $parts = $this->participants->where('assemblee_id', $assembleeId)->findAll();
+        $regle     = $this->regleDe($assemblee, false); // pas d'erreur si la majorité est « à chercher » (ex. quorum non atteint)
+        $parts     = $this->participants->where('assemblee_id', $assembleeId)->findAll();
 
         $noms = array_column($parts, 'nom', 'id');
         $par  = [];
@@ -275,20 +318,108 @@ class AssembleeService
 
         $resolutions = [];
         foreach ($this->resolutions->where('assemblee_id', $assembleeId)->orderBy('numero')->findAll() as $r) {
+            $prep = (bool) $r['voix_preponderante_utilisee'];
             $resolutions[] = [
                 'texte' => $r['texte'], 'pour' => (int) $r['voix_pour'], 'contre' => (int) $r['voix_contre'],
-                'adoptee' => (bool) $r['adoptee'],
+                'adoptee' => $r['adoptee'] === null ? null : (bool) $r['adoptee'],
+                'sens_vote_president' => $r['sens_vote_president'],
+                'voix_preponderante' => $prep,
+                // à reprendre tel quel dans le PV quand la voix prépondérante a décidé
+                'mention_pv' => $prep ? 'Voix prépondérante du président de séance (' . ($r['source'] ?? 'art. 483') . ')' : null,
+                'motif' => $r['motif'],
+                'source' => $r['source'],
+                'statut_regle' => $r['statut_regle'],
             ];
         }
 
+        $reunion = $this->reunions->find($assemblee['reunion_id']);
+        $societe = $this->societes->find($reunion['societe_id']);
+
+        $ordreDuJour = json_decode($reunion['ordre_du_jour'] ?? '[]', true);
+
         return [
-            'participants'   => $participants,
-            'quorum_atteint' => (bool) $assemblee['quorum_atteint'],
-            'resolutions'    => $resolutions,
+            // --- la réunion (pour choisir le gabarit de PV et remplir l'en-tête) ---
+            'societe'            => $societe['denomination'],
+            'nature'             => $reunion['nature_code'],          // AGC | AGO | AGE | CA
+            'numero_convocation' => (int) $reunion['numero_convocation'],
+            'date_reunion'       => $reunion['date_reunion'],
+            'heure'              => substr((string) $reunion['heure'], 0, 5),
+            'lieu'               => $reunion['lieu'],
+            'ordre_du_jour'      => is_array($ordreDuJour) ? $ordreDuJour : [],
+            // --- la séance (T1) ---
+            'date_tenue'         => $assemblee['date_tenue'],
+            'president_seance'   => $assemblee['president_seance'],
+            'secretaire'         => $assemblee['secretaire'],
+            // --- quorum ---
+            'voix_totales'       => (int) $assemblee['voix_totales'],
+            'voix_presentes_ou_representees' => (int) $assemblee['voix_presentes_ou_representees'],
+            'quorum_requis'      => $assemblee['quorum_requis_num'] . '/' . $assemblee['quorum_requis_den'],   // ex. "1/4"
+            'quorum_atteint'     => (bool) $assemblee['quorum_atteint'],
+            'motif_quorum'       => $assemblee['motif_quorum'],
+            // --- majorité (null si « à chercher ») ---
+            'majorite_requise'   => $regle['majorite_num'] !== null ? $regle['majorite_num'] . '/' . $regle['majorite_den'] : null,
+            'majorite_stricte'   => $regle['majorite_stricte'] !== null ? (bool) $regle['majorite_stricte'] : null, // true : « plus de » ; false : « au moins »
+            'majorite_base'      => $regle['majorite_base'],         // voix_exprimees | presents_ou_representes | null
+            // --- participants et décisions ---
+            'participants'       => $participants,
+            'resolutions'        => $resolutions,
+            'source_regle'       => $regle['source'] ?? null,
+            'regle_verifiee'     => (bool) ($regle['verifie'] ?? false),
         ];
     }
 
-    /** Voix totales : somme des titres (assemblée) ou nombre d'administrateurs (CA). */
+    // ------------------------------------------------------------------
+
+    /**
+     * Une insertion qui échoue renvoie false sans exception quand le mode d'erreurs de CI4 est coupé
+     * (environnement « production »). On la transforme en exception claire plutôt que de continuer avec un identifiant vide.
+     */
+    private function verifierInsertion(mixed $id, string $objet): int
+    {
+        if (! $id) {
+            $erreur = db_connect()->error();
+            throw new \RuntimeException("Échec de l'enregistrement ({$objet}) : " . ($erreur['message'] ?: 'erreur inconnue (voir writable/logs)'));
+        }
+        return (int) $id;
+    }
+
+    /** Décide l'adoption. Renvoie [adoptee (bool|null), enAttente (bool), voixPreponderanteUtilisee (bool)]. */
+    private function decider(array $regle, array $voix, int $voixPresentes, ?string $sensPresident): array
+    {
+        $egalite = $voix['pour'] === $voix['contre'] && $voix['pour'] > 0;
+
+        if ($egalite && (int) $regle['voix_preponderante_president'] === 1) {
+            if ($sensPresident === null) {
+                return [null, true, false];
+            }
+            // 'abstention' (abstenu ou absent) : pas de voix prépondérante exercée -> rejetée
+            return [$sensPresident === 'pour', false, in_array($sensPresident, ['pour', 'contre'], true)];
+        }
+        return [$this->calcul->resolutionAdoptee($voix, $regle, $voixPresentes), false, false];
+    }
+
+    private function baseMajorite(array $regle, array $voix, int $voixPresentes): int
+    {
+        return $regle['majorite_base'] === 'voix_exprimees' ? $voix['pour'] + $voix['contre'] : $voixPresentes;
+    }
+
+    private function somme(array $voix): int
+    {
+        return array_sum($voix);
+    }
+
+    /** Règle de quorum/majorité de l'assemblée ; exception si la majorité est « à chercher » (sauf si $exigerMajorite = false). */
+    private function regleDe(array $assemblee, bool $exigerMajorite = true): array
+    {
+        $reunion = $this->reunions->find($assemblee['reunion_id']);
+        $societe = $this->societes->find($reunion['societe_id']);
+        $regle   = $this->quorums->trouver((int) $societe['type_societe_id'], $reunion['nature_code'], (int) $reunion['numero_convocation']);
+        if ($regle === null || ($exigerMajorite && $regle['majorite_base'] === null)) {
+            throw new \RuntimeException("Majorité non renseignée pour {$reunion['nature_code']} (à chercher dans la loi).");
+        }
+        return $regle;
+    }
+
     private function voixTotales(array $societe, string $nature): int
     {
         if ($nature === 'CA') {
@@ -299,7 +430,6 @@ class AssembleeService
         return (int) ($row['total'] ?? 0);
     }
 
-    /** Voix d'un convoqué : ses titres (associé) ou 1 (administrateur). */
     private function voixDe(array $convoque, string $nature): int
     {
         if ($nature === 'CA') {

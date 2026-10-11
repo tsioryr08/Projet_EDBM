@@ -39,7 +39,13 @@ class DemoConvocation extends BaseCommand
             CLI::write("{$r['societe']} ({$r['type']}) - {$r['nature']} le {$r['date_reunion']} à {$r['heure']}, {$r['lieu']}");
             CLI::write("Délai légal : {$r['delai_jours']} jours  ({$r['source']}" . ($r['verifie'] ? ', vérifié' : ', à confirmer') . ')');
             CLI::write("Forme d'envoi : {$r['forme_envoi']}");
+            CLI::write('Ordre du jour : ' . implode(' ; ', $r['ordre_du_jour']));
             CLI::write("Date limite de convocation : {$r['date_convocation']}", 'green');
+            CLI::write('Pourquoi : ' . $r['justification']['motif']);
+            CLI::write('Statut : ' . \App\Libraries\Justification::STATUTS[$r['justification']['statut']]);
+            if ($r['justification']['avertissement']) {
+                CLI::write('Attention : ' . $r['justification']['avertissement'], 'yellow');
+            }
             if (isset($r['convoques'])) {
                 CLI::write('Convoqués : ' . implode(', ', $r['convoques']));
             }

@@ -10,7 +10,7 @@ class RegleDelaiModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
-    protected $allowedFields = ['type_societe_id', 'nature_code', 'numero_convocation', 'delai_jours', 'mode_calcul', 'forme_envoi', 'source', 'verifie', 'note'];
+    protected $allowedFields = ['type_societe_id', 'nature_code', 'numero_convocation', 'delai_jours', 'mode_calcul', 'forme_envoi', 'source', 'verifie', 'note', 'texte_officiel'];
 
     /** Règle applicable, ou null si elle n'est pas (encore) renseignée : « à chercher ». */
     public function trouver(int $typeSocieteId, string $nature, int $numeroConvocation): ?array
