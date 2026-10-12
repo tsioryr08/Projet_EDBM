@@ -2,6 +2,13 @@
 <?= $this->section('content') ?>
 <h1>Suivi du dossier — <?= esc($societe['denomination']) ?></h1>
 <p class="notice">Les dates de réunion, délais, quorums et majorités ne sont pas recalculés par l’interface : ils sont affichés depuis les données métier enregistrées.</p>
+<?php if (session()->getFlashdata('success')): ?>
+    <div class="notice"><?= esc(session()->getFlashdata('success')) ?></div>
+<?php endif; ?>
+<?php $messages = session()->getFlashdata('errors') ?? []; ?>
+<?php if (! empty($messages['bloquants'])): ?>
+    <div class="error"><strong>Erreurs bloquantes</strong><ul><?php foreach ($messages['bloquants'] as $message): ?><li><?= esc($message) ?></li><?php endforeach; ?></ul></div>
+<?php endif; ?>
 <?php if ($dossier): ?>
     <p><strong>Statut :</strong> <?= esc($dossier['statut']) ?></p>
     <p>Soumission : <?= esc($dossier['date_soumission'] ?? 'Non renseignée') ?> —
@@ -23,7 +30,7 @@
             <div class="grid">
                 <label class="field">Statut
                     <select name="statut">
-                        <?php foreach (['brouillon', 'soumis', 'valide', 'immatricule'] as $statut): ?>
+                        <?php foreach (array_unique(array_merge([$suivi['statut']], $suivi['transitions_possibles'] ?? [])) as $statut): ?>
                             <option value="<?= $statut ?>" <?= $dossier['statut'] === $statut ? 'selected' : '' ?>><?= $statut ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -43,6 +50,24 @@
             </div>
             <button type="submit">Enregistrer le suivi</button>
         </form>
+    </div>
+    <div class="card">
+        <h2>Historique des statuts</h2>
+        <?php if (empty($suivi['historique'])): ?>
+            <p>Aucun changement enregistré.</p>
+        <?php else: ?>
+            <table>
+                <tr><th>Date</th><th>Ancien statut</th><th>Nouveau statut</th><th>Auteur</th></tr>
+                <?php foreach ($suivi['historique'] as $changement): ?>
+                    <tr>
+                        <td><?= esc($changement['date_changement']) ?></td>
+                        <td><?= esc($changement['ancien_statut'] ?? '—') ?></td>
+                        <td><?= esc($changement['nouveau_statut']) ?></td>
+                        <td><?= esc($changement['auteur'] ?? '—') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php endif; ?>
     </div>
 <?php else: ?>
     <p class="notice">Aucun dossier n’est encore créé.</p>

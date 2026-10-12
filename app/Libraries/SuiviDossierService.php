@@ -5,6 +5,12 @@ namespace App\Libraries;
 class SuiviDossierService
 {
     private const STATUTS_AUTORISES = ['brouillon', 'soumis', 'valide', 'immatricule'];
+    private const TRANSITIONS = [
+        'brouillon' => ['brouillon', 'soumis'],
+        'soumis' => ['brouillon', 'valide'],
+        'valide' => ['immatricule'],
+        'immatricule' => [],
+    ];
 
     /**
      * Change le statut du dossier et enregistre la date correspondante.
@@ -28,6 +34,9 @@ class SuiviDossierService
 
         $dossier = $db->table('dossier')->where('societe_id', $societeId)->get()->getRowArray();
         if ($dossier === null) {
+            if ($statutCible !== 'brouillon') {
+                throw new \RuntimeException('Le dossier doit être créé en brouillon avant toute soumission.');
+            }
             $db->table('dossier')->insert([
                 'societe_id' => $societeId,
                 'statut'     => $statutCible,
@@ -36,6 +45,9 @@ class SuiviDossierService
         }
 
         $ancienStatut = $dossier['statut'] ?? null;
+        if ($ancienStatut !== null && ! in_array($statutCible, self::TRANSITIONS[$ancienStatut] ?? [], true)) {
+            throw new \RuntimeException("Transition impossible : {$ancienStatut} → {$statutCible}. Transitions autorisées : " . implode(', ', self::TRANSITIONS[$ancienStatut] ?? []) . '.');
+        }
         $updates = ['statut' => $statutCible];
 
         switch ($statutCible) {
@@ -58,7 +70,18 @@ class SuiviDossierService
                 break;
         }
 
+        $db->transStart();
         $db->table('dossier')->where('societe_id', $societeId)->update($updates);
+        if ($ancienStatut !== $statutCible && $db->tableExists('dossier_statut_historique')) {
+            $db->table('dossier_statut_historique')->insert([
+                'dossier_id' => $dossier['id'],
+                'ancien_statut' => $ancienStatut,
+                'nouveau_statut' => $statutCible,
+                'date_changement' => $dateMaj,
+                'auteur' => 'interface',
+            ]);
+        }
+        $db->transComplete();
 
         $dossierActuel = $db->table('dossier')->where('societe_id', $societeId)->get()->getRowArray();
 
@@ -71,6 +94,11 @@ class SuiviDossierService
             'date_immatriculation' => $dossierActuel['date_immatriculation'] ?? null,
             'date_maj' => $dateMaj,
             'message' => $this->messagePourStatut($dossierActuel['statut']),
+            'messages' => [
+                'infos' => [$this->messagePourStatut($dossierActuel['statut'])],
+                'avertissements' => [],
+                'bloquants' => [],
+            ],
         ];
     }
 
@@ -98,7 +126,26 @@ class SuiviDossierService
             'date_soumission' => $dossier['date_soumission'] ?? null,
             'date_validation' => $dossier['date_validation'] ?? null,
             'date_immatriculation' => $dossier['date_immatriculation'] ?? null,
+            'transitions_possibles' => $this->transitionsPossibles($dossier['statut'] ?? 'brouillon'),
+            'historique' => $this->historique($dossier['id'] ?? null),
         ];
+    }
+
+    public function transitionsPossibles(string $statut): array
+    {
+        return self::TRANSITIONS[$statut] ?? [];
+    }
+
+    public function historique(?int $dossierId): array
+    {
+        if ($dossierId === null || ! db_connect()->tableExists('dossier_statut_historique')) {
+            return [];
+        }
+
+        return db_connect()->table('dossier_statut_historique')
+            ->where('dossier_id', $dossierId)
+            ->orderBy('id', 'ASC')
+            ->get()->getResultArray();
     }
 
     private function normaliserStatut(string $statut): string

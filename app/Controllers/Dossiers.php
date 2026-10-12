@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\DossierService;
 use App\Libraries\PhaseBService;
+use App\Libraries\SuiviDossierService;
 use App\Models\DossierModel;
 use App\Models\SocieteModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -15,6 +16,7 @@ class Dossiers extends BaseController
     {
         $data = (new DossierService())->afficher($societeId);
         $data['societeId'] = $societeId;
+        $data['suivi'] = (new SuiviDossierService())->etat($societeId);
         $data['reunions'] = db_connect()->table('reunion')
             ->where('societe_id', $societeId)
             ->orderBy('id', 'DESC')
@@ -256,27 +258,13 @@ class Dossiers extends BaseController
     public function status(int $societeId): ResponseInterface
     {
         $status = (string) $this->request->getPost('statut');
-        $allowed = ['brouillon', 'soumis', 'valide', 'immatricule'];
-        if (! in_array($status, $allowed, true)) {
-            throw PageNotFoundException::forPageNotFound('Statut de dossier invalide.');
+        try {
+            $result = (new SuiviDossierService())->changerStatut($societeId, $status);
+        } catch (\RuntimeException $e) {
+            return redirect()->to('/dossiers/' . $societeId)
+                ->with('errors', ['bloquants' => [$e->getMessage()], 'avertissements' => [], 'infos' => []]);
         }
-
-        $dateSoumission = $this->request->getPost('date_soumission');
-        $dateValidation = $this->request->getPost('date_validation');
-        $dateImmatriculation = $this->request->getPost('date_immatriculation');
-        $dateDepot = $this->request->getPost('date_depot_prevue');
-        $dates = [
-            'date_depot_prevue' => $dateDepot ?: null,
-            'date_soumission' => $status === 'brouillon' ? null : ($dateSoumission ?: null),
-            'date_validation' => in_array($status, ['valide', 'immatricule'], true) ? ($dateValidation ?: null) : null,
-            'date_immatriculation' => $status === 'immatricule' ? ($dateImmatriculation ?: null) : null,
-        ];
-        $dossier = (new DossierModel())->where('societe_id', $societeId)->first();
-        if (! $dossier) {
-            (new DossierModel())->insert(['societe_id' => $societeId, 'statut' => $status] + $dates);
-        } else {
-            (new DossierModel())->update($dossier['id'], ['statut' => $status] + $dates);
-        }
-        return redirect()->to('/dossiers/' . $societeId);
+        return redirect()->to('/dossiers/' . $societeId)
+            ->with('success', $result['message']);
     }
 }
