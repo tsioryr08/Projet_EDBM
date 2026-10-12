@@ -1,21 +1,26 @@
-# the composer package lock file and install directory
-# Commit your application's lock file http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file
-# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
-# /composer.lock
-/fuel/vendor
+# Dependencies and local configuration
+/vendor/
+/.env
 
-# the fuelphp document
-/docs/
+# CodeIgniter runtime files
+/writable/cache/*
+/writable/debugbar/*
+/writable/logs/*
+/writable/documents/*
+/writable/session/*
+/writable/uploads/*
 
-# you may install these packages with `oil package`.
-# http://fuelphp.com/docs/packages/oil/package.html
-# /fuel/packages/auth/
-# /fuel/packages/email/
-# /fuel/packages/oil/
-# /fuel/packages/orm/
-# /fuel/packages/parser/
+# Keep required directory placeholders and example fixtures
+!/writable/cache/index.html
+!/writable/debugbar/index.html
+!/writable/logs/index.html
+!/writable/documents/index.html
+!/writable/session/index.html
+!/writable/uploads/index.html
+!/writable/exemples/
+!/writable/exemples/**
 
-# dynamically generated files
-/fuel/app/logs/*/*/*
-/fuel/app/cache/*/*
-/fuel/app/config/crypt.php
+# Build and test output
+/build/
+/coverage/
+/tests/coverage/
