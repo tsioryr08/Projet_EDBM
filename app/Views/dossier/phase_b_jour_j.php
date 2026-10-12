@@ -42,9 +42,22 @@
                 </label>
             </div>
 
-            <label class="field">Participants (une ligne par personne : nom;statut;mandataire si représenté)
-                <textarea name="participants" rows="12" placeholder="Exemple :&#10;Dupont;present;&#10;Martin;represente;Dupont&#10;Bernard;absent;"></textarea>
-            </label>
+            <h3>Participants convoqués</h3>
+            <?php foreach ($convoques as $index => $convoque): ?>
+                <div class="grid">
+                    <input type="hidden" name="participants_rows[<?= $index ?>][nom]" value="<?= esc($convoque['nom_affiche']) ?>">
+                    <strong><?= esc($convoque['nom_affiche']) ?></strong>
+                    <select name="participants_rows[<?= $index ?>][statut]">
+                        <option value="present">Présent</option>
+                        <option value="represente">Représenté</option>
+                        <option value="absent">Absent</option>
+                    </select>
+                    <select name="participants_rows[<?= $index ?>][par]">
+                        <option value="">Mandataire si représenté</option>
+                        <?php foreach ($convoques as $mandataire): ?><option value="<?= esc($mandataire['nom_affiche']) ?>"><?= esc($mandataire['nom_affiche']) ?></option><?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endforeach; ?>
 
             <div class="actions">
                 <button type="submit">Valider le jour J</button>
@@ -72,6 +85,16 @@
         <?php if (! empty($result['resume']['deuxieme_convocation']['possible'])): ?>
             <div class="notice">
                 Une 2e convocation est possible : n°<?= (int) ($result['resume']['deuxieme_convocation']['numero'] ?? 2) ?>
+                <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="nature" value="<?= esc($selectedReunion['nature_code'] ?? '') ?>">
+                    <input type="hidden" name="reunion_precedente_id" value="<?= (int) ($selectedReunion['id'] ?? 0) ?>">
+                    <label class="field">Nouvelle date <input type="date" name="date_reunion" required></label>
+                    <label class="field">Heure <input type="time" name="heure" value="09:00" required></label>
+                    <label class="field">Lieu <input type="text" name="lieu" value="<?= esc($selectedReunion['lieu'] ?? '') ?>" required></label>
+                    <input type="hidden" name="ordre_du_jour" value="">
+                    <button type="submit">Convoquer à nouveau</button>
+                </form>
             </div>
         <?php endif; ?>
     </div>

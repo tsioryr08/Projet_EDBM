@@ -29,9 +29,17 @@
         <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/voter') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="assemblee_id" value="<?= (int) $selectedAssemblee['id'] ?>">
-            <label class="field">Résolutions (une ligne = texte|pour|contre|abstention|blanc)
-                <textarea name="resolutions" rows="10" placeholder="Exemple :&#10;Approbation du rapport annuel|8|1|0|0&#10;Nomination du gérant|7|2|1|0"></textarea>
-            </label>
+            <div id="resolutions">
+                <div class="grid resolution-row">
+                    <textarea name="resolutions_rows[0][texte]" rows="2" placeholder="Texte de la résolution" required></textarea>
+                    <input name="resolutions_rows[0][pour]" type="number" min="0" value="0" placeholder="Pour">
+                    <input name="resolutions_rows[0][contre]" type="number" min="0" value="0" placeholder="Contre">
+                    <input name="resolutions_rows[0][abstention]" type="number" min="0" value="0" placeholder="Abstention">
+                    <input name="resolutions_rows[0][blanc]" type="number" min="0" value="0" placeholder="Blanc">
+                    <select name="resolutions_rows[0][sens_vote_president]"><option value="">Voix prépondérante non utilisée</option><option value="pour">Président : pour</option><option value="contre">Président : contre</option><option value="abstention">Président : abstention</option></select>
+                </div>
+            </div>
+            <button type="button" class="button secondary" id="add-resolution">Ajouter une résolution</button>
             <div class="actions">
                 <button type="submit">Enregistrer les votes</button>
             </div>
@@ -60,4 +68,18 @@
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+<script>
+document.getElementById('add-resolution')?.addEventListener('click', function () {
+    const container = document.getElementById('resolutions');
+    const index = container.querySelectorAll('.resolution-row').length;
+    const clone = container.querySelector('.resolution-row').cloneNode(true);
+    clone.querySelectorAll('input, textarea, select').forEach(function (field) {
+        field.name = field.name.replace(/\[\d+\]/, '[' + index + ']');
+        if (field.tagName === 'TEXTAREA') field.value = '';
+        else if (field.tagName === 'INPUT') field.value = '0';
+        else field.selectedIndex = 0;
+    });
+    container.appendChild(clone);
+});
+</script>
 <?= $this->endSection() ?>

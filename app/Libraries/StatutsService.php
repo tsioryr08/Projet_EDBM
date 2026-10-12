@@ -50,10 +50,6 @@ class StatutsService
         }
 
         $code = (string) $type['code'];
-        if ($code === 'SCA') {
-            throw new RuntimeException('Le gabarit SCA n’est pas encore disponible.');
-        }
-
         $vue = match ($code) {
             'SARL', 'SARLU' => 'pdf/statuts/sarl',
             'SA' => $societe['mode_administration'] === 'AG'
@@ -64,6 +60,7 @@ class StatutsService
                         'Le mode d’administration de cette SA est manquant ou non reconnu.'
                     )),
             'SCS', 'SNC' => 'pdf/statuts/scs_snc',
+            'SCA' => 'pdf/statuts/sca',
             'SC' => 'pdf/statuts/sc',
             default => throw new RuntimeException("Aucun gabarit de statuts disponible pour {$code}."),
         };

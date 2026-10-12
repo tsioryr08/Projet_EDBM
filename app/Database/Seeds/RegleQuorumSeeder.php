@@ -39,6 +39,16 @@ class RegleQuorumSeeder extends Seeder
             ['SARLU', 'AGE', 1, 'parts_ou_associes', 1, 2, 'voix_exprimees', 1, 2, 1, 0, 'Loi 2003-036 / SARLU à chercher', 'Quorum et majorité de la SARLU à vérifier'],
         ];
 
+        foreach (['SARL', 'SNC', 'SCS', 'SCA', 'SC'] as $codeType) {
+            foreach (['AGO', 'AGE'] as $nature) {
+                $rows[] = [
+                    $codeType, $nature, 2, 'parts_ou_associes', 0, 1, 'voix_exprimees', 1, 2, 1, 0,
+                    $codeType === 'SC' ? 'Loi 2001-026 / texte à confirmer' : 'Loi 2003-036 / texte à confirmer',
+                    'Règle de seconde convocation à confirmer.',
+                ];
+            }
+        }
+
         $existants = $this->db->table('regle_quorum')->get()->getResultArray();
         $clefs = [];
         foreach ($existants as $ligne) {

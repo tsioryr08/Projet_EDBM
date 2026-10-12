@@ -2,6 +2,7 @@
 <?= $this->section('content') ?>
 <h1>Phase B — Réunions et assemblées</h1>
 <p class="notice">L’écran de gestion de la phase B regroupe la planification, le jour J, le vote des résolutions et le registre des assemblées.</p>
+<p><a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/sarlu/decision') ?>">Parcours décision SARLU</a></p>
 
 <div class="grid">
     <section class="card">

@@ -31,6 +31,14 @@
             <label class="field">Numéro de convocation
                 <input type="number" name="numero_convocation" min="1" value="1">
             </label>
+            <label class="field">Réunion précédente (pour une 2e convocation)
+                <select name="reunion_precedente_id">
+                    <option value="">Aucune</option>
+                    <?php foreach ($reunions as $reunion): ?>
+                        <option value="<?= (int) $reunion['id'] ?>">#<?= (int) $reunion['id'] ?> — <?= esc($reunion['nature_code']) ?> — <?= esc($reunion['date_reunion']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
         </div>
 
         <label class="field">Ordre du jour
