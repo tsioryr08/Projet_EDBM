@@ -29,7 +29,7 @@ class Societes extends BaseController
         ]);
     }
 
-    public function create(): ResponseInterface
+    public function create(): string|ResponseInterface
     {
         $validation = service('validation');
         $validation->setRules([
@@ -39,6 +39,8 @@ class Societes extends BaseController
             'objet' => 'permit_empty',
             'capital' => 'permit_empty|decimal',
             'duree_annees' => 'permit_empty|is_natural',
+            'mot_de_passe' => 'required|min_length[8]|max_length[72]',
+            'mot_de_passe_confirmation' => 'required|matches[mot_de_passe]',
         ]);
         if (! $validation->withRequest($this->request)->run()) {
             return view('societe/form', [
@@ -61,6 +63,7 @@ class Societes extends BaseController
             'duree_annees' => $this->request->getPost('duree_annees') ?: null,
             'code_activite' => $this->request->getPost('code_activite') ?: null,
             'activite_reglementee' => $this->request->getPost('activite_reglementee') ? 1 : 0,
+            'mot_de_passe' => password_hash($this->request->getPost('mot_de_passe'), PASSWORD_DEFAULT),
         ]);
         if (! $societeId) {
             $db->transRollback();

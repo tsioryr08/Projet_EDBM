@@ -9,7 +9,7 @@ use CodeIgniter\CLI\CLI;
 /**
  * php spark demo:phase-b
  *
- * Démo T8 : écrans de la phase B : planification, journée de réunion, votes, registre des assemblées.
+ * Démo T8 : écrans de la Vie de Société : planification, journée de réunion, votes, registre des assemblées.
  */
 class DemoPhaseB extends BaseCommand
 {

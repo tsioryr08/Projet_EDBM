@@ -88,6 +88,10 @@ class PdfService
         ];
     }
 
+    /**
+     * Nettoie le nom du fichier et garantit qu'il contient une date :
+     * si le nom n'en a pas (AAAA-MM-JJ ou AAAAMMJJ), la date du jour est ajoutée.
+     */
     private function filename(string $filename): string
     {
         $filename = basename($filename);
@@ -97,6 +101,11 @@ class PdfService
             throw new RuntimeException('Le nom du fichier PDF est invalide.');
         }
 
-        return $filename;
+        $base = substr($filename, 0, -4);
+        if (! preg_match('/\d{4}-\d{2}-\d{2}|\d{8}/', $base)) {
+            $base .= '-' . date('Y-m-d');
+        }
+
+        return $base . '.pdf';
     }
 }

@@ -1,0 +1,1091 @@
+RESUME COMPLET ET DETAILLE DU PROJET SociéTech
+====================================================
+
+Date de ce resume : 12 octobre 2026
+Projet : Projet_EDBM
+Chemin : /opt/lampp/htdocs/DLA/Projet_EDBM
+Framework : CodeIgniter 4.7.2
+PHP : 8.2.34
+Base de donnees de developpement : legaltech_societe
+Serveur local : http://localhost:8080/
+Point d'entree public : http://localhost:8080/index.php/
+
+1. OBJECTIF GENERAL
+-------------------
+
+SociéTech est une application web PHP destinee a accompagner la creation
+et le suivi juridique de societes malagasy. Elle fournit :
+
+- un parcours de creation de societe ;
+- le choix de la forme sociale ;
+- la saisie des informations de la societe ;
+- la saisie des associes et des dirigeants ;
+- la creation automatique d'un dossier ;
+- une checklist des pieces requises ;
+- le suivi du statut du dossier ;
+- la planification et la tenue de reunions et assemblees ;
+- le calcul du quorum, des majorites et des resultats de vote ;
+- la generation de documents PDF ;
+- la gestion des convocations, proces-verbaux et documents constitutifs ;
+- des regles metier stockees en base pour eviter de coder les regles juridiques
+  directement dans les vues ;
+- un acces protege au dossier de chaque societe par mot de passe.
+
+Le projet est une application CodeIgniter classique, avec une separation
+Controllers / Models / Libraries / Views / Migrations / Seeds.
+
+2. TECHNOLOGIES ET DEPENDANCES
+------------------------------
+
+Runtime :
+
+- PHP ^8.2 ;
+- CodeIgniter 4.7.2 ;
+- MySQL/MariaDB via le driver MySQLi ;
+- Apache local (XAMPP/LAMPP) ;
+- sessions CodeIgniter avec stockage fichier dans writable/session.
+
+Dependances principales :
+
+- dompdf/dompdf ^3.0 pour les PDF ;
+- laminas/laminas-escaper pour l'echappement ;
+- psr/log ;
+- PHPUnit 10 ou 11 pour les tests ;
+- CodeIgniter coding standard et PHP CS Fixer pour le developpement.
+
+Fichiers de configuration importants :
+
+- .env : environnement et connexion base de donnees ;
+- app/Config/App.php : URL de base, indexPage et configuration generale ;
+- app/Config/Database.php : groupes de connexion base ;
+- app/Config/Routes.php : routes applicatives ;
+- app/Config/Session.php : session fichier, cookie ci_session, duree 7200 secondes ;
+- app/Config/Security.php : protection CSRF par cookie ;
+- app/Config/Filters.php : filtres CodeIgniter ;
+- composer.json : dependances et commande de test.
+
+Le fichier .env contient notamment :
+
+    CI_ENVIRONMENT = development
+    database.default.hostname = 127.0.0.1
+    database.default.database = legaltech_societe
+    database.default.username = root
+    database.default.password =
+    database.default.DBDriver = MySQLi
+    database.default.port = 3306
+
+Ne jamais mettre de secrets reels dans le depot. Le fichier .env local peut
+contenir des valeurs propres a la machine.
+
+3. ARBORESCENCE PRINCIPALE
+--------------------------
+
+app/
+  Commands/       Commandes CLI de demonstration et de generation de donnees
+  Config/         Configuration CodeIgniter
+  Controllers/    Controleurs HTTP
+  Database/
+    Migrations/   Creation et evolution du schema SQL
+    Seeds/        Donnees de reference et regles metier
+  Libraries/     Services metier reutilisables
+  Models/         Acces aux tables et requetes CodeIgniter
+  Views/          Vues HTML et PDF
+
+public/
+  index.php       Point d'entree web
+  assets/         CSS et JavaScript partage
+
+tests/
+  unit/           Tests unitaires et tests de surface
+  database/       Tests de base CodeIgniter
+  session/        Tests de session
+  _support/       Classes utilitaires de test
+
+writable/
+  cache/          Cache CodeIgniter
+  documents/      PDF generes
+  logs/           Logs applicatifs
+  session/        Fichiers de session
+  uploads/        Fichiers envoyes
+
+4. PARCOURS UTILISATEUR ET AFFICHAGE
+------------------------------------
+
+4.1 Accueil
+
+Route :
+
+    GET /
+
+Controleur :
+
+    app/Controllers/Home.php
+
+Methode :
+
+    Home::index()
+
+La methode recupere les societes enregistrees avec SocieteModel, triees par
+identifiant decroissant, puis les affiche dans :
+
+    app/Views/home/index.php
+
+La page affiche :
+
+- le titre SociéTech ;
+- un bouton "Creer une societe" ;
+- un lien vers le PDF de demonstration ;
+- la liste "Mes societes" ;
+- le nom et l'identifiant de chaque societe ;
+- le bouton "Ouvrir le dossier" ;
+- le bouton "Telecharger les statuts".
+
+Le lien "Ouvrir le dossier" pointe vers /dossiers/{id}. Cette route est
+protegee par le controleur Dossiers et redirige vers l'ecran de mot de passe
+si la session d'acces n'est pas active.
+
+4.2 Choix de la forme sociale
+
+Route :
+
+    GET /societes/type
+
+Controleur :
+
+    app/Controllers/Societes.php
+
+Methode :
+
+    Societes::type()
+
+Vue :
+
+    app/Views/societe/type.php
+
+La vue affiche les formes disponibles depuis la table type_societe. Chaque
+forme permet de continuer vers /societes/nouveau?type_societe_id={id}.
+
+4.3 Formulaire de creation
+
+Route :
+
+    GET /societes/nouveau
+    POST /societes
+
+Controleur :
+
+    app/Controllers/Societes.php
+
+Methodes :
+
+- new() : affiche le formulaire ;
+- create() : valide et enregistre la societe ;
+- saveRows() : enregistre les associes et dirigeants envoyes en tableaux.
+
+Vue :
+
+    app/Views/societe/form.php
+
+Le formulaire contient :
+
+- type_societe_id ;
+- denomination ;
+- mode_administration pour les SA ;
+- siege ;
+- objet ;
+- capital ;
+- duree_annees ;
+- code_activite ;
+- activite_reglementee ;
+- les associes ;
+- les dirigeants ;
+- mot_de_passe ;
+- mot_de_passe_confirmation.
+
+Validation du formulaire :
+
+- type_societe_id requis et numerique ;
+- denomination requise, longueur maximale 150 ;
+- siege facultatif, longueur maximale 255 ;
+- capital facultatif et decimal ;
+- duree_annees facultatif et entier naturel ;
+- mot_de_passe requis, minimum 8 caracteres, maximum 72 ;
+- mot_de_passe_confirmation obligatoire et identique au mot de passe.
+
+Protection du mot de passe :
+
+- le mot de passe n'est jamais stocke en clair ;
+- Societes::create() utilise password_hash(..., PASSWORD_DEFAULT) ;
+- SocieteModel autorise le champ mot_de_passe ;
+- la colonne est VARCHAR(255) pour stocker le hash.
+
+Ordre de creation :
+
+1. validation du formulaire ;
+2. ouverture d'une transaction ;
+3. insertion dans societe ;
+4. insertion du dossier associe avec le statut brouillon ;
+5. insertion des associes ;
+6. insertion des dirigeants ;
+7. evaluation des regles de creation ;
+8. rollback si une regle bloquante est rencontree ;
+9. commit ;
+10. redirection vers /dossiers/{id}.
+
+Si une vue est retournee en cas d'erreur, create() est declaree :
+
+    public function create(): string|ResponseInterface
+
+Cette union est necessaire car CodeIgniter accepte soit une chaine HTML
+retournee par view(), soit une reponse HTTP.
+
+4.4 Acces protege au dossier
+
+Routes :
+
+    GET  /dossiers/{id}/acces
+    POST /dossiers/{id}/acces
+
+Controleur :
+
+    app/Controllers/Dossiers.php
+
+Methode :
+
+    Dossiers::access()
+
+Vue :
+
+    app/Views/dossier/access.php
+
+La vue affiche :
+
+- "Acces securise" ;
+- le nom de la societe ;
+- un seul champ mot_de_passe ;
+- un bouton "Ouvrir le dossier" ;
+- un bouton "Retour".
+
+La confirmation du mot de passe est demandee uniquement pendant la creation
+de la societe. Lors de l'ouverture du dossier, un seul mot de passe est
+demande.
+
+Le traitement POST utilise explicitement :
+
+    $this->request->getMethod(true) === 'POST'
+
+Cette forme est importante avec la version de CodeIgniter utilisee, car
+getMethod() peut retourner la methode dans une casse differente.
+
+Verification :
+
+    password_verify($motDePasse, $societe['mot_de_passe'])
+
+En cas de succes, la session contient :
+
+    societe_access_{id} = true
+
+Puis l'utilisateur est redirige vers /dossiers/{id}.
+
+Dans Dossiers::show(), l'acces est refuse si cette cle de session est absente :
+
+    if (! session()->get('societe_access_' . $societeId)) {
+        return redirect()->to(site_url('dossiers/' . $societeId . '/acces'));
+    }
+
+Ainsi, un utilisateur ne peut pas contourner l'ecran en saisissant
+directement l'URL du dossier.
+
+Attention aux anciennes societes :
+
+- les societes creees avant l'ajout de la fonctionnalite peuvent avoir
+  mot_de_passe NULL ;
+- aucun mot de passe ne peut etre valide si le hash est absent ;
+- une nouvelle fonctionnalite de reinitialisation pourra etre ajoutee plus
+  tard si necessaire.
+
+4.5 Dossier
+
+Route :
+
+    GET /dossiers/{id}
+
+Controleur :
+
+    app/Controllers/Dossiers.php
+
+Methode :
+
+    Dossiers::show()
+
+Service principal :
+
+    app/Libraries/DossierService.php
+
+Vue :
+
+    app/Views/dossier/index.php
+
+Le dossier affiche :
+
+- la denomination ;
+- le statut courant ;
+- les dates de soumission, validation et immatriculation ;
+- les reunions et assemblees ;
+- le suivi de statut ;
+- l'historique des changements ;
+- les documents PDF ;
+- les pieces requises ;
+- les etapes EDBM ;
+- les convocations ;
+- les proces-verbaux.
+
+4.6 Vie de Société : reunions et assemblees
+
+Page principale :
+
+    GET /dossiers/{id}/phase-b
+
+Planification :
+
+    GET  /dossiers/{id}/phase-b/planifier
+    POST /dossiers/{id}/phase-b/planifier
+
+Jour de reunion :
+
+    GET  /dossiers/{id}/phase-b/jour-j
+    GET  /dossiers/{id}/phase-b/jour-j/{reunionId}
+    POST /dossiers/{id}/phase-b/tenir
+    POST /dossiers/{id}/phase-b/interventions
+
+Votes :
+
+    GET  /dossiers/{id}/phase-b/votes
+    GET  /dossiers/{id}/phase-b/votes/{assembleeId}
+    POST /dossiers/{id}/phase-b/voter
+
+Registre :
+
+    GET /dossiers/{id}/phase-b/registre
+
+Vues concernees :
+
+- dossier/phase_b.php ;
+- dossier/phase_b_planifier.php ;
+- dossier/phase_b_jour_j.php ;
+- dossier/phase_b_quorum_absent.php ;
+- dossier/phase_b_votes.php ;
+- dossier/phase_b_registre.php.
+
+La Vie de Société permet de :
+
+- choisir la nature AGO, AGE ou CA ;
+- fixer date, heure, lieu et ordre du jour ;
+- gerer les convocations et la deuxieme convocation ;
+- enregistrer les presents ;
+- gerer les mandats et pouvoirs ;
+- saisir les interventions ;
+- calculer le quorum ;
+- reporter une reunion si le quorum est absent ;
+- saisir les resolutions ;
+- saisir les votes ;
+- determiner l'adoption ;
+- departager une egalite selon les regles applicables ;
+- produire des documents PDF.
+
+4.7 Decision SARLU
+
+Route :
+
+    GET /dossiers/{id}/sarlu/decision
+
+Methode :
+
+    Dossiers::sarluDecision()
+
+Vue :
+
+    app/Views/dossier/sarlu_decision.php
+
+La route verifie le type de societe. Si la societe n'est pas une SARLU, elle
+redirige vers la Vie de Société avec un message d'erreur.
+
+4.8 Documents PDF
+
+Routes :
+
+    GET /pdf/demo/convocation
+    GET /pdf/statuts/{societeId}
+    GET /pdf/convocations/{reunionId}
+    GET /pdf/proces-verbaux/{assembleeId}
+    GET /pdf/constitutifs/{societeId}/{document}
+
+Controleurs :
+
+- PdfDemo.php ;
+- Statuts.php ;
+- Convocations.php ;
+- ProcesVerbaux.php ;
+- Constituants.php.
+
+Services PDF :
+
+- PdfService.php ;
+- StatutsService.php ;
+- ConvocationService.php ;
+- ProcesVerbalService.php ;
+- PvService.php.
+
+Les PDF sont generees avec Dompdf et peuvent etre enregistres dans
+writable/documents.
+
+5. CONTROLEURS
+--------------
+
+app/Controllers/BaseController.php
+
+- classe de base des controleurs ;
+- initialise request, response, logger et helpers communs.
+
+app/Controllers/Home.php
+
+- index() : accueil et liste des societes.
+
+app/Controllers/Societes.php
+
+- type() : choix de la forme sociale ;
+- new() : formulaire de creation ;
+- create() : creation transactionnelle ;
+- saveRows() : persistance des lignes associes/dirigeants.
+
+app/Controllers/Dossiers.php
+
+- access() : authentification par mot de passe ;
+- show() : affichage securise du dossier ;
+- phaseB() : tableau de la Vie de Société ;
+- phaseBPlanifier() : formulaire de planification ;
+- phaseBJourJ() : presence et deroulement ;
+- phaseBVotes() : votes et resolutions ;
+- phaseBRegistre() : registre ;
+- sarluDecision() : decision d'associe unique ;
+- planifierPhaseB() ;
+- tenirPhaseB() ;
+- ajouterIntervention() ;
+- voterPhaseB() ;
+- piece() : enregistrement d'une piece ;
+- status() : mise a jour du suivi.
+
+app/Controllers/Statuts.php
+
+- generate() : genere les statuts PDF.
+
+app/Controllers/Convocations.php
+
+- generate() : genere une convocation PDF.
+
+app/Controllers/ProcesVerbaux.php
+
+- generate() : genere un proces-verbal PDF.
+
+app/Controllers/Constituants.php
+
+- generate() : genere les documents constitutifs.
+
+app/Controllers/PdfDemo.php
+
+- convocation() : PDF de demonstration.
+
+6. MODELES ET TABLES
+--------------------
+
+Les modeles se trouvent dans app/Models et encapsulent les tables principales.
+
+SocieteModel -> societe
+
+- identite, type, siege, objet, capital, duree ;
+- code activite et activite reglementee ;
+- mot_de_passe (hash) ;
+- cree_le.
+
+TypeSocieteModel -> type_societe
+
+- code et libelle de la forme ;
+- regles liees a la forme ;
+- parCode() pour retrouver une forme par code.
+
+AssocieModel -> associe
+
+- personnes physiques ou morales ;
+- apports, nombre de titres ;
+- mineur non emancipe ;
+- liens entre conjoints ;
+- commandite/commanditaire.
+
+DirigeantModel -> dirigeant
+
+- nom ;
+- fonction ;
+- associe eventuel ;
+- nomination et fin de mandat ;
+- actionnaire ou non.
+
+DossierModel -> dossier
+
+- un dossier par societe ;
+- statut brouillon, soumis, valide ou immatricule ;
+- dates de depot, soumission, validation et immatriculation.
+
+PieceFournieModel -> piece_fournie
+
+- pieces deposees ;
+- document requis ;
+- associe ou dirigeant concerne ;
+- date et chemin du fichier.
+
+DocumentRequisModel -> document_requis
+
+- catalogue des pieces ;
+- categorie, libelle, conditions et validite.
+
+ReunionModel -> reunion
+
+- nature, date, heure, lieu ;
+- numero de convocation ;
+- ordre du jour ;
+- reunion precedente.
+
+ConvoqueModel -> convoque
+
+- personnes convoquees a une reunion.
+
+AssembleeModel -> assemblee
+
+- tenue effective ;
+- date ;
+- president et secretaire ;
+- quorum et voix.
+
+ParticipantModel -> participant
+
+- participants presents ;
+- voix et representation.
+
+PouvoirModel -> pouvoir
+
+- mandats et pouvoirs ;
+- autorisation de mandataire externe ajoutee par migration.
+
+ResolutionModel -> resolution
+
+- resolutions votees ;
+- numero, texte et resultat.
+
+DocumentGenereModel -> document_genere
+
+- documents produits par l'application.
+
+InterventionModel -> intervention
+
+- interventions enregistrees pendant la reunion.
+
+RegleDelaiModel -> regle_delai
+
+- delais de convocation ;
+- trouver(type, nature, numeroConvocation).
+
+RegleQuorumModel -> regle_quorum
+
+- regles de quorum ;
+- trouver(type, nature, numeroConvocation).
+
+RegleValidationModel -> regle_validation
+
+- controles de creation ;
+- trouver(code, typeSocieteId) ;
+- regles globales lorsque type_societe_id est NULL.
+
+DossierStatutHistoriqueModel -> dossier_statut_historique
+
+- historique des transitions de statut.
+
+7. SERVICES METIER
+------------------
+
+SocieteService.php
+
+Construit une representation complete d'une societe avec ses associes,
+dirigeants et informations de base.
+
+DossierCreationService.php
+
+Service central de validation initiale. Il :
+
+- charge la societe ;
+- charge les associes et dirigeants ;
+- construit la checklist ;
+- verifie les regles de creation ;
+- produit les bloquants et avertissements ;
+- verifie notamment la duree maximale ;
+- verifie les contraintes propres aux SA et SNC.
+
+La regle duree_max est stockee dans regle_validation avec valeur maximale 99.
+La migration EnsureDureeMaxValidationRule garantit sa presence en base.
+
+DocumentChecklistService.php
+
+- construit la liste des pieces obligatoires ;
+- prend en compte la forme sociale et les conditions ;
+- signale les pieces manquantes, valides ou expirees.
+
+SuiviDossierService.php
+
+- calcule le statut ;
+- determine les transitions possibles ;
+- enregistre l'historique.
+
+ReunionService.php
+
+- cree et prepare les reunions ;
+- applique les regles de delai ;
+- gere les convocations ;
+- gere la deuxieme convocation.
+
+ConvocationService.php
+
+- prepare les donnees d'une convocation ;
+- calcule ou explique les delais applicables.
+
+AssembleeService.php
+
+- tient une assemblee ;
+- valide les participants ;
+- calcule les voix ;
+- calcule le quorum ;
+- enregistre pouvoirs et participants ;
+- gere les resolutions et les votes ;
+- gere le departage en cas d'egalite ;
+- exporte l'etat en JSON.
+
+PhaseBService.php
+
+- orchestre les operations de la Vie de Société ;
+- relie planification, jour J, votes et registre.
+
+InterventionService.php
+
+- enregistre et recupere les interventions de reunion.
+
+DecisionAssocieUniqueService.php
+
+- prepare les decisions propres a une SARLU.
+
+CalculRegles.php
+
+- applique les calculs de delai, quorum et majorite a partir des donnees
+  stockees en base.
+
+Justification.php
+
+- produit les justifications des delais ;
+- justifie le quorum atteint ou non ;
+- explique l'adoption d'une resolution ;
+- rattache les decisions a une base legale ou une mention "a confirmer".
+
+StatutsService.php
+
+- prepare les donnees des statuts ;
+- affiche denomination, siege, objet, capital, duree, activite, associes et
+  dirigeants.
+
+PdfService.php
+
+- configure Dompdf ;
+- rend les vues HTML en PDF ;
+- fournit les reponses de telechargement.
+
+ProcesVerbalService.php et PvService.php
+
+- construisent les proces-verbaux ;
+- produisent les donnees de presence, quorum, ordre du jour, votes et resultats.
+
+8. BASE DE DONNEES ET MIGRATIONS
+--------------------------------
+
+Migrations de reference :
+
+2026-10-11-100001_CreateReferentiels.php
+
+- type_societe ;
+- nature_reunion ;
+- jour_ferie ;
+- etape_creation.
+
+2026-10-11-100002_CreateRegles.php
+
+- regle_delai ;
+- regle_quorum ;
+- document_requis ;
+- document_type_societe.
+
+2026-10-11-100003_CreateSociete.php
+
+- societe ;
+- associe ;
+- dirigeant ;
+- commissaire_aux_comptes ;
+- dossier ;
+- piece_fournie.
+
+2026-10-11-100004_CreateReunions.php
+
+- reunion ;
+- convoque ;
+- assemblee ;
+- participant ;
+- pouvoir ;
+- resolution ;
+- vote ;
+- document_genere.
+
+2026-10-11-100005_AjouterJustificationEtVoixPreponderante.php
+
+- ajoute les textes officiels aux regles ;
+- ajoute les champs de justification et de voix preponderante.
+
+2026-10-12-100006_CreateDossierStatutHistorique.php
+
+- cree l'historique des changements de statut.
+
+2026-10-12-100006_CreateInterventions.php
+
+- cree la table intervention.
+
+2026-10-12-100007_CreateRegleValidation.php
+
+- cree les regles de validation de creation ;
+- code, type, minimum, maximum, severite, message, source, verifie et note.
+
+2026-10-12-100008_AddMotDePasseSociete.php
+
+- ajoute societe.mot_de_passe ;
+- migration idempotente avec verification de colonne.
+
+2026-10-12-100009_AutoriserMandataireExterne.php
+
+- ajoute la possibilite de mandataire externe dans pouvoir.
+
+2026-10-12-100010_InterventionsMandatairesExternes.php
+
+- complete les informations des interventions externes.
+
+2026-10-12-100011_EnsureDureeMaxValidationRule.php
+
+- ajoute la regle duree_max si elle manque ;
+- valeur maximale 99 ;
+- migration idempotente ;
+- corrige les bases ou la table existait sans les donnees du seeder.
+
+Le fichier test.sql fournit un schema SQL de demonstration/install manuel. Les
+migrations restent la methode recommandee pour synchroniser une base existante.
+
+9. SEEDS
+--------
+
+DatabaseSeeder.php appelle :
+
+- TypeSocieteSeeder ;
+- NatureReunionSeeder ;
+- EtapeCreationSeeder ;
+- RegleDelaiSeeder ;
+- RegleQuorumSeeder ;
+- RegleValidationSeeder ;
+- DocumentRequisSeeder.
+
+Role de chaque seeder :
+
+- TypeSocieteSeeder : SA, SARL, SARLU, SCS, SNC, SC et leurs caracteristiques ;
+- NatureReunionSeeder : AGO, AGE et CA ;
+- EtapeCreationSeeder : etapes du parcours EDBM ;
+- RegleDelaiSeeder : delais et convocations ;
+- RegleQuorumSeeder : quorum et majorites ;
+- RegleValidationSeeder : duree_max et controles SA/SNC ;
+- DocumentRequisSeeder : catalogue des pieces.
+
+DemoSeeder.php est separe et cree des donnees de demonstration. Il est
+volontairement a lancer a part.
+
+10. COMMANDES CLI DE DEMONSTRATION
+-----------------------------------
+
+Les commandes se trouvent dans app/Commands :
+
+- DemoSociete.php ;
+- DemoDossier.php ;
+- DemoChecklist.php ;
+- DemoConvocation.php ;
+- DemoDeuxiemeConvocation.php ;
+- DemoAssemblee.php ;
+- DemoPhaseB.php ;
+- DemoPv.php ;
+- DemoSuiviDossier.php.
+
+Elles servent a tester les services metier et a creer des scenarios reproductibles
+sans passer entierement par l'interface web.
+
+Commandes utiles :
+
+    php spark migrate
+    php spark migrate:status
+    php spark db:seed DatabaseSeeder
+    php spark db:seed DemoSeeder
+    vendor/bin/phpunit
+
+11. SECURITE ET VALIDATION DES ENTREES
+--------------------------------------
+
+CSRF :
+
+- les formulaires HTML utilisent csrf_field() ;
+- la protection CSRF est configuree dans Security.php ;
+- le formulaire d'acces, le formulaire de creation et les formulaires de
+  Vie de Société sont proteges.
+
+Echappement :
+
+- les sorties HTML utilisent principalement esc() ;
+- les vues PDF utilisent htmlspecialchars() ou les helpers adaptes.
+
+Mot de passe :
+
+- password_hash() a l'enregistrement ;
+- password_verify() a l'ouverture ;
+- jamais de comparaison directe avec le hash ;
+- jamais de stockage du mot de passe en clair.
+
+Transactions :
+
+- la creation d'une societe et de son dossier est transactionnelle ;
+- une erreur bloquante provoque un rollback ;
+- le dossier ne doit pas etre valide si les regles de creation bloquent.
+
+Validation :
+
+- validation CodeIgniter dans les controleurs ;
+- contraintes SQL dans les migrations ;
+- regles juridiques dans regle_validation, regle_delai et regle_quorum ;
+- les regles non verifiees peuvent etre signalees comme avertissements ou
+  "a confirmer".
+
+12. TESTS
+---------
+
+Tests actuellement presents :
+
+- tests/unit/DocumentChecklistServiceTest.php ;
+- tests/unit/PvServiceTest.php ;
+- tests/unit/WorkflowSurfaceTest.php ;
+- tests/unit/HealthTest.php ;
+- tests/database/ExampleDatabaseTest.php ;
+- tests/session/ExampleSessionTest.php.
+
+DocumentChecklistServiceTest :
+
+- verifie la construction de checklist documentaire.
+
+PvServiceTest :
+
+- verifie la preparation des proces-verbaux et des resultats.
+
+WorkflowSurfaceTest :
+
+- verifie la presence des routes principales ;
+- verifie les champs structures de la Vie de Société ;
+- verifie la presence des assets communs ;
+- verifie l'absence de scripts inline dans certaines vues.
+
+Etat de validation observe pendant les evolutions recentes :
+
+- les tests metier cibles passent ;
+- la syntaxe PHP des fichiers modifies passe ;
+- PHPUnit peut signaler un warning si aucun driver de couverture n'est installe ;
+- WorkflowSurfaceTest possede un controle historique qui signale un attribut
+  style= dans phase_b_planifier.php. Ce point est independant du systeme de
+  mot de passe.
+
+Commande recommandee :
+
+    vendor/bin/phpunit --no-coverage
+
+13. HISTORIQUE DES DERNIERES EVOLUTIONS IMPORTANTES
+---------------------------------------------------
+
+Ajout de la protection des dossiers :
+
+- ajout de societe.mot_de_passe ;
+- ajout de la migration AddMotDePasseSociete ;
+- ajout des champs de creation et confirmation ;
+- hashage avec password_hash ;
+- nouvelle vue dossier/access.php ;
+- routes GET et POST /dossiers/{id}/acces ;
+- verification password_verify ;
+- session societe_access_{id} ;
+- protection de Dossiers::show().
+
+Correction du bug d'ouverture :
+
+Le controleur utilisait une comparaison en minuscules :
+
+    getMethod() === 'post'
+
+La branche POST n'etait pas executee dans l'environnement utilise. Elle a ete
+remplacee par :
+
+    getMethod(true) === 'POST'
+
+Le parcours complet a ensuite ete teste avec :
+
+- un hash bcrypt de test ;
+- un POST avec CSRF ;
+- une redirection ;
+- la conservation de la session ;
+- l'affichage effectif du dossier.
+
+Correction de la regle duree_max :
+
+Le seeder contenait la regle, mais une base existante pouvait avoir la table
+regle_validation sans la ligne duree_max. La migration
+EnsureDureeMaxValidationRule ajoute donc automatiquement cette ligne si elle
+manque.
+
+14. FLUX TECHNIQUE COMPLET DE CREATION
+--------------------------------------
+
+Navigateur :
+
+    /societes/type
+          |
+          v
+    /societes/nouveau
+          |
+          | formulaire POST avec mot_de_passe et confirmation
+          v
+    POST /societes
+          |
+          +-- validation formulaire
+          +-- password_hash()
+          +-- INSERT societe
+          +-- INSERT dossier brouillon
+          +-- INSERT associes
+          +-- INSERT dirigeants
+          +-- evaluation DossierCreationService
+          |
+          +-- erreur bloquante : rollback + formulaire
+          |
+          +-- succes : commit
+          v
+    /dossiers/{id}
+          |
+          +-- session absente : /dossiers/{id}/acces
+          |
+          +-- session presente : dossier/index.php
+
+FLUX D'AUTHENTIFICATION :
+
+    GET /dossiers/{id}/acces
+          |
+          v
+    formulaire avec un seul mot_de_passe
+          |
+    POST /dossiers/{id}/acces
+          |
+          +-- methode POST explicite
+          +-- recherche de societe
+          +-- verification hash
+          +-- session societe_access_{id}=true
+          v
+    redirect /dossiers/{id}
+
+15. POINTS D'ATTENTION POUR LA MAINTENANCE
+------------------------------------------
+
+- Toujours lancer php spark migrate apres l'ajout d'une migration.
+- Ne pas supprimer ou modifier manuellement les anciens hashes sans sauvegarde.
+- Pour une societe ancienne sans mot_de_passe, prevoir une procedure de
+  reinitialisation ou une migration de reprise.
+- Ne pas afficher le hash dans une vue ou un log.
+- Ne pas utiliser password_hash deux fois sur un mot de passe deja hashe.
+- Conserver password_verify pour les connexions.
+- Toute nouvelle route de dossier doit aussi verifier la session si elle expose
+  des donnees privees. Actuellement la protection centrale est explicite dans
+  show(); les autres actions de dossier doivent etre auditees si elles sont
+  exposees directement.
+- Garder les regles metier en base quand elles sont configurables ou soumises
+  a confirmation juridique.
+- Utiliser les services existants plutot que de reproduire les calculs dans
+  les controleurs ou les vues.
+- Toujours echapper les donnees affichees avec esc().
+- Toujours inclure csrf_field() dans les formulaires POST.
+- Tester les nouveaux parcours avec une base contenant les migrations et les
+  seeds a jour.
+
+16. FICHIERS LES PLUS IMPORTANTS A CONSULTER
+--------------------------------------------
+
+Point d'entree et routes :
+
+- public/index.php
+- app/Config/Routes.php
+- app/Config/App.php
+- app/Config/Database.php
+- app/Config/Session.php
+- app/Config/Security.php
+
+Creation et acces :
+
+- app/Controllers/Societes.php
+- app/Controllers/Dossiers.php
+- app/Models/SocieteModel.php
+- app/Views/societe/type.php
+- app/Views/societe/form.php
+- app/Views/dossier/access.php
+- app/Views/dossier/index.php
+
+Metier :
+
+- app/Libraries/DossierCreationService.php
+- app/Libraries/DossierService.php
+- app/Libraries/DocumentChecklistService.php
+- app/Libraries/ReunionService.php
+- app/Libraries/AssembleeService.php
+- app/Libraries/PhaseBService.php
+- app/Libraries/CalculRegles.php
+- app/Libraries/Justification.php
+
+Donnees :
+
+- app/Database/Migrations/
+- app/Database/Seeds/DatabaseSeeder.php
+- app/Database/Seeds/RegleValidationSeeder.php
+- app/Database/Seeds/DocumentRequisSeeder.php
+- test.sql
+
+PDF :
+
+- app/Controllers/Statuts.php
+- app/Controllers/Convocations.php
+- app/Controllers/ProcesVerbaux.php
+- app/Controllers/Constituants.php
+- app/Libraries/PdfService.php
+- app/Libraries/StatutsService.php
+- app/Libraries/ConvocationService.php
+- app/Libraries/ProcesVerbalService.php
+- app/Views/pdf/
+
+Tests :
+
+- tests/unit/
+- tests/database/
+- tests/session/
+
+FIN DU RESUME
+=============

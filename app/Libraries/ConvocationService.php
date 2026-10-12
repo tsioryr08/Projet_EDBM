@@ -3,7 +3,9 @@
 namespace App\Libraries;
 
 use App\Models\ConvoqueModel;
+use App\Models\DirigeantModel;
 use App\Models\RegleDelaiModel;
+use App\Models\RegleQuorumModel;
 use App\Models\ReunionModel;
 use App\Models\SocieteModel;
 use App\Models\TypeSocieteModel;
@@ -23,12 +25,16 @@ class ConvocationService
         private ?TypeSocieteModel $types = null,
         private ?ConvoqueModel $convoques = null,
         private ?RegleDelaiModel $delais = null,
+        private ?RegleQuorumModel $quorums = null,
+        private ?DirigeantModel $dirigeants = null,
     ) {
-        $this->reunions  ??= new ReunionModel();
-        $this->societes  ??= new SocieteModel();
-        $this->types     ??= new TypeSocieteModel();
-        $this->convoques ??= new ConvoqueModel();
-        $this->delais    ??= new RegleDelaiModel();
+        $this->reunions   ??= new ReunionModel();
+        $this->societes   ??= new SocieteModel();
+        $this->types      ??= new TypeSocieteModel();
+        $this->convoques  ??= new ConvoqueModel();
+        $this->delais     ??= new RegleDelaiModel();
+        $this->quorums    ??= new RegleQuorumModel();
+        $this->dirigeants ??= new DirigeantModel();
     }
 
     /**
@@ -64,34 +70,44 @@ class ConvocationService
         }
 
         $nature = (string) $reunion['nature_code'];
+        $numero = (int) $reunion['numero_convocation'];
+
         $convoques = $this->convoques
             ->where('reunion_id', $reunionId)
             ->orderBy('id', 'ASC')
             ->findAll();
-        $regle = $this->delais->trouver(
-            (int) $type['id'],
-            $nature,
-            (int) $reunion['numero_convocation']
-        );
+        $regle = $this->delais->trouver((int) $type['id'], $nature, $numero);
+        $regleQuorum = $this->quorums->trouver((int) $type['id'], $nature, $numero);
+        $dirigeant = $this->dirigeants
+            ->where('societe_id', (int) $societe['id'])
+            ->orderBy('id', 'ASC')
+            ->first();
 
         $data = [
-            'titre'             => $this->titre($nature),
-            'societe'           => $societe['denomination'],
-            'type'              => $type['code'],
-            'nature'            => $nature,
-            'numero_convocation'=> (int) $reunion['numero_convocation'],
-            'date_reunion'      => $reunion['date_reunion'],
-            'heure'             => substr((string) $reunion['heure'], 0, 5),
-            'lieu'              => $reunion['lieu'],
-            'ordre_du_jour'     => array_values($ordreDuJour),
-            'delai_jours'       => $reunion['delai_applique'],
-            'mode_calcul'       => $reunion['mode_calcul_delai'],
-            'date_convocation'  => $reunion['date_convocation'],
-            'convoques'         => $convoques,
-            'forme_envoi'       => $regle['forme_envoi'] ?? null,
-            'source'            => $regle['source'] ?? null,
-            'verifie'           => $regle === null ? null : (bool) $regle['verifie'],
-            'justification'     => null,
+            'titre'              => $this->titre($nature),
+            'societe'            => $societe['denomination'],
+            'siege'              => $societe['siege'] ?? '',
+            'type'               => $type['code'],
+            'nature'             => $nature,
+            'qualificatif'       => $nature === 'AGE' ? 'extraordinaire' : 'ordinaire',
+            'numero_convocation' => $numero,
+            'date_reunion'       => $reunion['date_reunion'],
+            'date_reunion_fr'    => $this->dateFr((string) $reunion['date_reunion']),
+            'heure'              => substr((string) $reunion['heure'], 0, 5),
+            'heure_fr'           => str_replace(':', 'h', substr((string) $reunion['heure'], 0, 5)),
+            'lieu'               => $reunion['lieu'],
+            'ordre_du_jour'      => array_values($ordreDuJour),
+            'delai_jours'        => $reunion['delai_applique'],
+            'mode_calcul'        => $reunion['mode_calcul_delai'],
+            'date_convocation'   => $reunion['date_convocation'],
+            'date_emission'      => $this->dateFr(date('Y-m-d')),
+            'quorum'             => $this->quorumTexte($regleQuorum),
+            'signataire'         => $dirigeant['nom'] ?? null,
+            'convoques'          => $convoques,
+            'forme_envoi'        => $regle['forme_envoi'] ?? null,
+            'source'             => $regle['source'] ?? null,
+            'verifie'            => $regle === null ? null : (bool) $regle['verifie'],
+            'justification'      => null,
         ];
 
         return [
@@ -101,7 +117,12 @@ class ConvocationService
             'societe_id'  => (int) $societe['id'],
             'reunion_id'  => $reunionId,
             'nature'      => 'convocation',
-            'nom_fichier' => $this->nomFichier((string) $societe['denomination'], $nature, $reunionId),
+            'nom_fichier' => $this->nomFichier(
+                (string) $societe['denomination'],
+                $nature,
+                (string) $reunion['date_reunion'],
+                $reunionId
+            ),
             'data'        => $data,
         ];
     }
@@ -109,13 +130,54 @@ class ConvocationService
     private function titre(string $nature): string
     {
         return $nature === 'CA'
-            ? 'Convocation du conseil d’administration'
-            : 'Convocation à une assemblée';
+            ? 'Convocation au conseil d’administration'
+            : 'Convocation à l’assemblée générale';
     }
 
-    private function nomFichier(string $societe, string $nature, int $reunionId): string
+    private function nomFichier(string $societe, string $nature, string $dateReunion, int $reunionId): string
     {
         $base = preg_replace('/[^A-Za-z0-9]+/', '-', $societe) ?? 'societe';
-        return 'convocation-' . trim($base, '-') . '-' . $nature . '-' . $reunionId . '.pdf';
+        $date = preg_match('/^\d{4}-\d{2}-\d{2}/', $dateReunion) ? substr($dateReunion, 0, 10) : date('Y-m-d');
+
+        return 'convocation-' . trim($base, '-') . '-' . $nature . '-' . $date . '-R' . $reunionId . '.pdf';
+    }
+
+    /** « 22 octobre 2026 » ; retourne une ligne vide si la date est invalide. */
+    private function dateFr(string $date): string
+    {
+        $timestamp = $date !== '' ? strtotime($date) : false;
+        if ($timestamp === false) {
+            return '_________';
+        }
+
+        $mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        $jour = (int) date('j', $timestamp);
+
+        return ($jour === 1 ? '1er' : (string) $jour) . ' ' . $mois[(int) date('n', $timestamp) - 1] . ' ' . date('Y', $timestamp);
+    }
+
+    /**
+     * Libellé du quorum recopié depuis la règle en base, sans aucun calcul.
+     * Retourne null si la règle ou sa valeur est introuvable (ligne vide dans le PDF).
+     */
+    private function quorumTexte(?array $regle): ?string
+    {
+        if ($regle === null) {
+            return null;
+        }
+
+        foreach (['quorum_libelle', 'libelle', 'description', 'texte'] as $cle) {
+            if (! empty($regle[$cle]) && is_string($regle[$cle])) {
+                return $regle[$cle];
+            }
+        }
+
+        foreach (['quorum_pourcentage', 'pourcentage', 'taux', 'quorum_pct', 'quorum'] as $cle) {
+            if (isset($regle[$cle]) && is_numeric($regle[$cle])) {
+                return rtrim(rtrim(number_format((float) $regle[$cle], 2, ',', ''), '0'), ',') . ' %';
+            }
+        }
+
+        return null;
     }
 }

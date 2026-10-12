@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\AccesDossier;
 use App\Libraries\DossierService;
 use App\Libraries\InterventionService;
 use App\Libraries\Justification;
@@ -15,8 +16,48 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class Dossiers extends BaseController
 {
+    private function verifierAcces(int $societeId): ?ResponseInterface
+    {
+        return AccesDossier::ouvert($societeId) ? null : AccesDossier::redirection($societeId);
+    }
+
+    public function access(int $societeId): string|ResponseInterface
+    {
+        $societe = (new SocieteModel())->find($societeId);
+        if (! $societe) {
+            throw PageNotFoundException::forPageNotFound('Société introuvable.');
+        }
+
+        if ($this->request->getMethod(true) === 'POST') {
+            $motDePasse = (string) $this->request->getPost('mot_de_passe');
+            if (empty($societe['mot_de_passe'])) {
+                return view('dossier/access', [
+                    'societe' => $societe,
+                    'errors' => ['Aucun mot de passe n’est configuré pour cette société. Créez une nouvelle société avec un mot de passe, ou configurez celui-ci avant d’ouvrir ce dossier.'],
+                ]);
+            }
+            if (! empty($societe['mot_de_passe']) && password_verify($motDePasse, $societe['mot_de_passe'])) {
+                session()->set('societe_access_' . $societeId, true);
+                return redirect()->to(site_url('dossiers/' . $societeId));
+            }
+            return view('dossier/access', [
+                'societe' => $societe,
+                'errors' => ['Le mot de passe est incorrect.'],
+            ]);
+        }
+
+        return view('dossier/access', [
+            'societe' => $societe,
+            'errors' => [],
+        ]);
+    }
+
     public function sarluDecision(int $societeId): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -33,7 +74,7 @@ class Dossiers extends BaseController
         ]);
     }
 
-    public function show(int $societeId): string
+    private function donneesDossier(int $societeId): array
     {
         $data = (new DossierService())->afficher($societeId);
         $data['societeId'] = $societeId;
@@ -48,11 +89,52 @@ class Dossiers extends BaseController
             ->where('r.societe_id', $societeId)
             ->orderBy('a.id', 'DESC')
             ->get()->getResultArray();
-        return view('dossier/index', $data);
+
+        return $data;
     }
 
-    public function phaseB(int $societeId): string
+    public function show(int $societeId): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        return view('dossier/index', $this->donneesDossier($societeId));
+    }
+
+    public function suivi(int $societeId): string|ResponseInterface
+    {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        return view('dossier/suivi', $this->donneesDossier($societeId));
+    }
+
+    public function pieces(int $societeId): string|ResponseInterface
+    {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        return view('dossier/pieces', $this->donneesDossier($societeId));
+    }
+
+    public function documents(int $societeId): string|ResponseInterface
+    {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        return view('dossier/documents', $this->donneesDossier($societeId));
+    }
+
+    public function phaseB(int $societeId): string|ResponseInterface
+    {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -79,8 +161,12 @@ class Dossiers extends BaseController
         ]);
     }
 
-    public function phaseBPlanifier(int $societeId): string
+    public function phaseBPlanifier(int $societeId): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -105,8 +191,12 @@ class Dossiers extends BaseController
         ]);
     }
 
-    public function phaseBJourJ(int $societeId, ?int $reunionId = null): string
+    public function phaseBJourJ(int $societeId, ?int $reunionId = null): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $etapeDeroulementDemandee = $reunionId !== null || $this->request->getGet('etape') === 'deroulement';
         $reunionId ??= (int) ($this->request->getGet('reunion_id') ?: 0) ?: null;
         $societe = (new SocieteModel())->find($societeId);
@@ -258,8 +348,12 @@ class Dossiers extends BaseController
         ]);
     }
 
-    public function phaseBVotes(int $societeId, ?int $assembleeId = null): string
+    public function phaseBVotes(int $societeId, ?int $assembleeId = null): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $assembleeId ??= (int) ($this->request->getGet('assemblee_id') ?: 0) ?: null;
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
@@ -293,8 +387,12 @@ class Dossiers extends BaseController
         ]);
     }
 
-    public function phaseBRegistre(int $societeId): string
+    public function phaseBRegistre(int $societeId): string|ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -311,6 +409,10 @@ class Dossiers extends BaseController
 
     public function planifierPhaseB(int $societeId): ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $nature = strtoupper((string) $this->request->getPost('nature'));
         $dateReunion = (string) $this->request->getPost('date_reunion');
         $heure = (string) $this->request->getPost('heure');
@@ -361,6 +463,10 @@ class Dossiers extends BaseController
 
     public function tenirPhaseB(int $societeId): ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $reunionId = (int) $this->request->getPost('reunion_id');
         $participants = [];
         $rows = $this->request->getPost('participants_rows');
@@ -402,6 +508,10 @@ class Dossiers extends BaseController
 
     public function ajouterIntervention(int $societeId): ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $assembleeId = (int) $this->request->getPost('assemblee_id');
         $auteurSelection = (string) $this->request->getPost('auteur_selection');
         $texte = (string) $this->request->getPost('texte');
@@ -428,6 +538,10 @@ class Dossiers extends BaseController
 
     public function voterPhaseB(int $societeId): ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $assembleeId = (int) $this->request->getPost('assemblee_id');
         $resolutions = [];
         $rows = $this->request->getPost('resolutions_rows');
@@ -470,25 +584,52 @@ class Dossiers extends BaseController
             ->with('success', 'Votes enregistrés : ' . $adoptees . ' résolution(s) adoptée(s)');
     }
 
-    public function piece(int $societeId, int $documentId): ResponseInterface
+    public function enregistrerPieces(int $societeId): ResponseInterface
     {
-        (new DossierService())->enregistrerPiece($societeId, $documentId, [
-            'date_piece' => $this->request->getPost('date_piece'),
-            'fichier' => $this->request->getPost('fichier'),
-        ]);
-        return redirect()->to('/dossiers/' . $societeId);
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        $pieces = $this->request->getPost('pieces');
+        $nb = 0;
+
+        if (is_array($pieces)) {
+            $service = new DossierService();
+            foreach ($pieces as $documentId => $champs) {
+                $fichier = trim((string) ($champs['fichier'] ?? ''));
+                $date    = trim((string) ($champs['date_piece'] ?? ''));
+
+                if ($fichier === '' && $date === '') {
+                    continue;
+                }
+
+                $service->enregistrerPiece($societeId, (int) $documentId, [
+                    'date_piece' => $date !== '' ? $date : null,
+                    'fichier'    => $fichier !== '' ? $fichier : null,
+                ]);
+                $nb++;
+            }
+        }
+
+        return redirect()->to(site_url('dossiers/' . $societeId . '/pieces'))
+            ->with('success', $nb . ' pièce(s) enregistrée(s).');
     }
 
     public function status(int $societeId): ResponseInterface
     {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
         $status = (string) $this->request->getPost('statut');
         try {
             $result = (new SuiviDossierService())->changerStatut($societeId, $status);
         } catch (\RuntimeException $e) {
-            return redirect()->to('/dossiers/' . $societeId)
+            return redirect()->to('/dossiers/' . $societeId . '/suivi')
                 ->with('errors', ['bloquants' => [$e->getMessage()], 'avertissements' => [], 'infos' => []]);
         }
-        return redirect()->to('/dossiers/' . $societeId)
+
+        return redirect()->to('/dossiers/' . $societeId . '/suivi')
             ->with('success', $result['message']);
     }
 }

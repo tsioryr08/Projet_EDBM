@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\AccesDossier;
 use App\Libraries\PdfService;
 use App\Libraries\StatutsService;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -10,6 +11,10 @@ class Statuts extends BaseController
 {
     public function generate(int $societeId): ResponseInterface
     {
+        if (! AccesDossier::ouvert($societeId)) {
+            return AccesDossier::redirection($societeId);
+        }
+
         $document = (new StatutsService())->preparer($societeId);
         $result = (new PdfService())->generateFromView(
             $document['vue'],

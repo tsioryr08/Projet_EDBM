@@ -1,8 +1,8 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<div class="page-heading"><div><p class="help">Phase B · Étape 4</p><h1>Registre des assemblées</h1><p class="help"><?= esc($societe['denomination']) ?></p></div></div>
+<div class="page-heading"><div><p class="help">Vie de Société · Étape 4</p><h1>Registre des assemblées</h1><p class="help"><?= esc($societe['denomination']) ?></p></div></div>
 <div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
-<p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
+<p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la Vie de Société</a></p>
 
 <div class="card">
     <h2>Historique des assemblées</h2>

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\AccesDossier;
 use App\Libraries\PdfService;
 use App\Models\AssocieModel;
 use App\Models\DirigeantModel;
@@ -14,6 +15,10 @@ class Constituants extends BaseController
 {
     public function generate(int $societeId, string $document): ResponseInterface
     {
+        if (! AccesDossier::ouvert($societeId)) {
+            return AccesDossier::redirection($societeId);
+        }
+
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw new RuntimeException("Société #{$societeId} introuvable.");

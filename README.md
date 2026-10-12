@@ -1,4 +1,4 @@
-# Legaltech EDBM — Création et vie juridique des sociétés
+# SociéTech — Création et vie juridique des sociétés
 
 Application web CodeIgniter 4 / PHP destinée à accompagner la création d’une société à Madagascar et le suivi de sa vie juridique :
 
@@ -91,7 +91,7 @@ GET  /pdf/statuts/{societeId}
 GET  /pdf/constitutifs/{societeId}/{document}
 ```
 
-### Phase B — Vie juridique
+### Vie de Société — Vie juridique
 
 | Étape | État | Routes / fichiers |
 |---|---|---|
@@ -127,7 +127,7 @@ GET  /pdf/proces-verbaux/{assembleeId}
 |---|---|
 | [`Home.php`](app/Controllers/Home.php) | Accueil. |
 | [`Societes.php`](app/Controllers/Societes.php) | Choix de forme et création. |
-| [`Dossiers.php`](app/Controllers/Dossiers.php) | Dossier, checklist, suivi et Phase B. |
+| [`Dossiers.php`](app/Controllers/Dossiers.php) | Dossier, checklist, suivi et Vie de Société. |
 | [`Statuts.php`](app/Controllers/Statuts.php) | Statuts PDF. |
 | [`Constituants.php`](app/Controllers/Constituants.php) | Documents constitutifs PDF. |
 | [`Convocations.php`](app/Controllers/Convocations.php) | Convocations PDF. |
@@ -151,7 +151,7 @@ Le répertoire [`app/Entities/`](app/Entities/) ne contient pas d’entité mét
 | [`DocumentChecklistService.php`](app/Libraries/DocumentChecklistService.php) | Checklist alternative avec templates PHP. |
 | [`DossierCreationService.php`](app/Libraries/DossierCreationService.php) | Contrôles de validité de création. |
 | [`SuiviDossierService.php`](app/Libraries/SuiviDossierService.php) | Statut du dossier. |
-| [`PhaseBService.php`](app/Libraries/PhaseBService.php) | Façade des écrans Phase B. |
+| [`PhaseBService.php`](app/Libraries/PhaseBService.php) | Façade des écrans Vie de Société. |
 | [`CalculRegles.php`](app/Libraries/CalculRegles.php) | Calculs génériques. |
 | [`Justification.php`](app/Libraries/Justification.php) | Motifs, sources et statuts juridiques. |
 | [`PdfService.php`](app/Libraries/PdfService.php) | HTML vers PDF et enregistrement. |
@@ -176,10 +176,10 @@ Les migrations créent les tables métier suivantes :
 | Référentiels | `type_societe`, `nature_reunion`, `jour_ferie`, `etape_creation` |
 | Règles | `regle_delai`, `regle_quorum`, `document_requis`, `document_type_societe` |
 | Création | `societe`, `associe`, `dirigeant`, `commissaire_aux_comptes`, `dossier`, `piece_fournie` |
-| Phase B | `reunion`, `convoque`, `assemblee`, `participant`, `pouvoir`, `resolution`, `vote` |
+| Vie de Société | `reunion`, `convoque`, `assemblee`, `participant`, `pouvoir`, `resolution`, `vote` |
 | Documents | `document_genere` |
 
-La table technique `migrations` est également présente. Le plan annonçait 22 tables métier ; la table `vote` est bien créée dans la migration Phase B.
+La table technique `migrations` est également présente. Le plan annonçait 22 tables métier ; la table `vote` est bien créée dans la migration Vie de Société.
 
 Migrations :
 
@@ -347,7 +347,7 @@ La couverture actuelle ne valide pas encore suffisamment :
 | T5 — justifications juridiques | Fait sous conditions |
 | T6 — deuxième convocation | Fait sous conditions, règle 2e convocation requise |
 | T7 — suivi de dossier | Fait après migration historique |
-| T8 — écrans Phase B | Fait sous conditions, calculs dans les services |
+| T8 — écrans Vie de Société | Fait sous conditions, calculs dans les services |
 | T9 — voix prépondérante du CA | Fait sous conditions |
 | T10 — règles restantes | Fait en partie, éléments listés dans `docs/regles-a-confirmer.md` |
 | O1 — moteur PDF | Fait |

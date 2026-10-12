@@ -1,105 +1,66 @@
-<h1><?= htmlspecialchars($titre, ENT_QUOTES, 'UTF-8') ?></h1>
+<?php
+$e = static fn ($valeur): string => htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
+$blanc = '_________';
 
-<p>
-    <strong>Société :</strong>
-    <?= htmlspecialchars((string) $societe, ENT_QUOTES, 'UTF-8') ?>
-    <br>
-    <strong>Type :</strong>
-    <?= htmlspecialchars((string) $type, ENT_QUOTES, 'UTF-8') ?>
-</p>
+$estCa = $nature === 'CA';
+$titreLettre = $estCa
+    ? 'CONVOCATION AU CONSEIL D’ADMINISTRATION'
+    : 'CONVOCATION À L’ASSEMBLÉE GÉNÉRALE ' . strtoupper((string) $qualificatif);
+$reunionLibelle = $estCa
+    ? 'la réunion du conseil d’administration'
+    : 'l’assemblée générale ' . $qualificatif;
+$membres = $estCa ? 'des administrateurs' : 'des membres';
+$ordinal = (int) $numero_convocation === 1 ? '1re' : (int) $numero_convocation . 'e';
 
-<table>
-    <tr>
-        <th>Réunion</th>
-        <td><?= htmlspecialchars((string) $nature, ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-    <tr>
-        <th>Convocation</th>
-        <td><?= (int) $numero_convocation ?>e convocation</td>
-    </tr>
-    <tr>
-        <th>Date et heure</th>
-        <td>
-            <?= htmlspecialchars((string) $date_reunion, ENT_QUOTES, 'UTF-8') ?>
-            à <?= htmlspecialchars((string) $heure, ENT_QUOTES, 'UTF-8') ?>
-        </td>
-    </tr>
-    <tr>
-        <th>Lieu</th>
-        <td><?= htmlspecialchars((string) $lieu, ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-    <tr>
-        <th>Date d’envoi au plus tard</th>
-        <td><?= htmlspecialchars((string) ($date_convocation ?? 'Non renseignée'), ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-</table>
+$destinataires = empty($convoques) ? [null] : array_values($convoques);
+$dernier = array_key_last($destinataires);
+?>
+<?php foreach ($destinataires as $index => $convoque): ?>
+    <div<?= $index !== $dernier ? ' style="page-break-after: always;"' : '' ?>>
+        <h1 style="text-align: center;"><?= $e($titreLettre) ?></h1>
 
-<h2>Personnes convoquées</h2>
-<?php if (empty($convoques)): ?>
-    <p class="notice">Aucune personne convoquée n’est enregistrée pour cette réunion.</p>
-<?php else: ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Qualité</th>
-                <th>Mode d’envoi</th>
-                <th>Date d’envoi</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($convoques as $convoque): ?>
-            <tr>
-                <td><?= htmlspecialchars((string) $convoque['nom_affiche'], ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars((string) $convoque['role'], ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars((string) ($convoque['mode_envoi'] ?? 'Selon la règle fournie'), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars((string) ($convoque['date_envoi'] ?? 'Non renseignée'), ENT_QUOTES, 'UTF-8') ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
+        <p>
+            <strong><?= $e($societe) ?></strong><br>
+            <?= $siege !== '' ? $e($siege) : $blanc ?>
+        </p>
 
-<h2>Ordre du jour</h2>
-<?php if (empty($ordre_du_jour)): ?>
-    <p class="notice">Aucun point d’ordre du jour n’est renseigné.</p>
-<?php else: ?>
-    <ol>
-    <?php foreach ($ordre_du_jour as $point): ?>
-        <li><?= htmlspecialchars((string) $point, ENT_QUOTES, 'UTF-8') ?></li>
-    <?php endforeach; ?>
-    </ol>
-<?php endif; ?>
+        <p style="text-align: right;">Le <?= $e($date_emission) ?></p>
 
-<h2>Délai et source</h2>
-<table>
-    <tr>
-        <th>Délai appliqué</th>
-        <td><?= htmlspecialchars((string) ($delai_jours ?? 'Non renseigné'), ENT_QUOTES, 'UTF-8') ?> jour(s)</td>
-    </tr>
-    <tr>
-        <th>Mode de calcul</th>
-        <td><?= htmlspecialchars((string) ($mode_calcul ?? 'Non renseigné'), ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-    <tr>
-        <th>Forme d’envoi</th>
-        <td><?= htmlspecialchars((string) ($forme_envoi ?? 'Non renseignée'), ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-    <tr>
-        <th>Source</th>
-        <td><?= htmlspecialchars((string) ($source ?? 'Non renseignée'), ENT_QUOTES, 'UTF-8') ?></td>
-    </tr>
-    <tr>
-        <th>Statut de vérification</th>
-        <td>
-            <?= $verifie === null ? 'Non fourni' : ($verifie ? 'vérifié' : 'à confirmer') ?>
-        </td>
-    </tr>
-</table>
+        <p><?= $e($convoque['nom_affiche'] ?? $blanc) ?></p>
 
-<?php if (! empty($justification)): ?>
-    <div class="notice">
-        <strong>Justification :</strong>
-        <?= htmlspecialchars((string) ($justification['motif'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+        <p><strong>Objet :</strong> Convocation à <?= $e($reunionLibelle) ?> du <?= $e($date_reunion_fr) ?></p>
+
+        <p>Madame, Monsieur,</p>
+
+        <p>
+            Nous vous invitons à participer à <?= $e($reunionLibelle) ?> de la société
+            <?= $e($societe) ?>. Elle aura lieu le <?= $e($date_reunion_fr) ?>
+            à <?= $e($heure_fr) ?>, au <?= $e($lieu) ?>.
+            Il s’agit de la <?= $e($ordinal) ?> convocation.
+        </p>
+
+        <p>Les délibérations porteront sur l’ordre du jour suivant :</p>
+        <?php if (empty($ordre_du_jour)): ?>
+            <p><?= $blanc ?></p>
+        <?php else: ?>
+            <ol>
+            <?php foreach ($ordre_du_jour as $point): ?>
+                <li><?= $e($point) ?></li>
+            <?php endforeach; ?>
+            </ol>
+        <?php endif; ?>
+
+        <p>
+            Conformément aux dispositions des statuts, une délibération en
+            <?= $e($reunionLibelle) ?> est possible à condition que
+            <?= ! empty($quorum) ? $e($quorum) : $blanc ?> <?= $e($membres) ?> soient présents.
+        </p>
+
+        <p>
+            Vous remerciant pour l’attention portée à ce courrier, nous vous prions d’agréer,
+            Madame, Monsieur, l’expression de notre considération distinguée.
+        </p>
+
+        <p style="text-align: right;"><?= ! empty($signataire) ? $e($signataire) : $blanc ?></p>
     </div>
-<?php endif; ?>
+<?php endforeach; ?>

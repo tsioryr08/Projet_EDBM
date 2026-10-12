@@ -2,14 +2,24 @@
 
 namespace App\Controllers;
 
+use App\Libraries\AccesDossier;
 use App\Libraries\ConvocationService;
 use App\Libraries\PdfService;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class Convocations extends BaseController
 {
     public function generate(int $reunionId): ResponseInterface
     {
+        $societeId = AccesDossier::societeDeReunion($reunionId);
+        if ($societeId === null) {
+            throw PageNotFoundException::forPageNotFound('Réunion introuvable.');
+        }
+        if (! AccesDossier::ouvert($societeId)) {
+            return AccesDossier::redirection($societeId);
+        }
+
         $document = (new ConvocationService())->preparer($reunionId);
         $result = (new PdfService())->generateFromView(
             $document['vue'],

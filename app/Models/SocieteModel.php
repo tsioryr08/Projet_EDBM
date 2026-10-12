@@ -10,5 +10,5 @@ class SocieteModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
-    protected $allowedFields = ['type_societe_id', 'mode_administration', 'denomination', 'siege', 'objet', 'capital', 'duree_annees', 'code_activite', 'activite_reglementee'];
+    protected $allowedFields = ['type_societe_id', 'mode_administration', 'denomination', 'siege', 'objet', 'capital', 'duree_annees', 'code_activite', 'activite_reglementee', 'mot_de_passe'];
 }

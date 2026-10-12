@@ -16,6 +16,12 @@
 <select name="mode_administration"><option value="">Non applicable</option><option value="AG">Administrateur général</option><option value="CA">Conseil d’administration</option></select></label><br>
 <div class="grid"><label class="field">Siège <input name="siege" maxlength="255"></label><label class="field">Objet <textarea name="objet"></textarea></label><label class="field">Capital <input name="capital" type="number" step="0.01"></label><label class="field">Durée (années) <input name="duree_annees" type="number" min="0" max="99"></label><label class="field">Code activité <input name="code_activite"></label></div>
 <label><input type="checkbox" name="activite_reglementee" value="1"> Activité réglementée</label></div>
+<div class="panel"><h2>4. Sécurité du dossier</h2>
+<p class="help">Ce mot de passe sera demandé avant chaque ouverture du dossier de cette société.</p>
+<div class="grid">
+    <label class="field">Mot de passe <input name="mot_de_passe" type="password" required minlength="8" maxlength="72" autocomplete="new-password"><span class="help">8 caractères minimum.</span></label>
+    <label class="field">Confirmer le mot de passe <input name="mot_de_passe_confirmation" type="password" required minlength="8" maxlength="72" autocomplete="new-password"></label>
+</div></div>
 <div class="panel"><h2>2. Associés</h2>
 <div id="associes">
 <div class="grid row" data-row>

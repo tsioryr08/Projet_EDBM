@@ -3,8 +3,8 @@
 <div class="page-heading"><div><p class="help">Portail juridique</p><h1>Création et vie de la société</h1><p class="help">Un parcours guidé pour constituer, documenter et suivre votre société.</p></div></div>
 <div class="alert alert-info" role="note"><strong>Avant de commencer :</strong> vérifiez la disponibilité de la dénomination auprès de l’EDBM. L’application ne réserve pas le nom.</div>
 <div class="actions">
-    <a class="button success" href="<?= site_url('societes/type') ?>">Créer une société</a>
-    <a class="button secondary" href="<?= site_url('pdf/demo/convocation') ?>">Aperçu PDF exemple</a>
+    <!-- <a class="button success" href="<?= site_url('societes/type') ?>">Créer une société</a> -->
+    <!-- <a class="button secondary" href="<?= site_url('pdf/demo/convocation') ?>">Aperçu PDF exemple</a> -->
 </div>
 <div class="grid">
     <section class="card"><h2>Créer une société</h2><p>Choisissez la forme, renseignez les associés et dirigeants, puis constituez votre dossier.</p><a class="button" href="<?= site_url('societes/type') ?>">Démarrer</a></section>

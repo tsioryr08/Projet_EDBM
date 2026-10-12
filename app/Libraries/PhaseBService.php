@@ -7,9 +7,9 @@ use App\Models\ReunionModel;
 use App\Models\SocieteModel;
 
 /**
- * T8 - Écrans de la phase B.
+ * T8 - Écrans de la Vie de Société.
  *
- * Regroupe les écrans métier de la phase B :
+ * Regroupe les écrans métier de la Vie de Société :
  * - planification de réunion,
  * - tenue de l'assemblée / journée de vote,
  * - registre des assemblées.

@@ -132,6 +132,7 @@ CREATE TABLE societe (
   duree_annees TINYINT UNSIGNED NULL COMMENT 'Maximum 99 ans (art. 23 de la loi 2003-036)',
   code_activite VARCHAR(20) NULL COMMENT 'Code NOMAC',
   activite_reglementee TINYINT(1) NOT NULL DEFAULT 0,
+  mot_de_passe VARCHAR(255) NULL COMMENT 'Hash du mot de passe d’accès au dossier',
   cree_le TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT ck_societe_duree CHECK (duree_annees IS NULL OR duree_annees <= 99),
   CONSTRAINT fk_societe_type FOREIGN KEY (type_societe_id) REFERENCES type_societe(id)
