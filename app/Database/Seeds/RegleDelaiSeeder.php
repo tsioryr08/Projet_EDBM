@@ -42,6 +42,16 @@ class RegleDelaiSeeder extends Seeder
             [$t['SARLU'], 'AGE', 1, null, null, 'Loi 2003-036, SARLU – à chercher', 0, 'Délai de convocation de la SARLU à chercher'],
         ];
 
+        foreach (['SARL', 'SNC', 'SCS', 'SCA', 'SC', 'SARLU'] as $code) {
+            foreach (['AGO', 'AGE'] as $nature) {
+                $rows[] = [
+                    $t[$code], $nature, 2, null, null,
+                    $code === 'SC' ? 'Loi 2001-026, à chercher' : 'Loi 2003-036, à chercher',
+                    0, 'Délai de seconde convocation à confirmer.',
+                ];
+            }
+        }
+
         $existants = $this->db->table('regle_delai')->get()->getResultArray();
         $clefs = [];
         foreach ($existants as $ligne) {

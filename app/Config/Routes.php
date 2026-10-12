@@ -12,6 +12,7 @@ $routes->get('pdf/convocations/(:num)', 'Convocations::generate/$1');
 $routes->get('pdf/proces-verbaux/(:num)', 'ProcesVerbaux::generate/$1');
 $routes->get('dossiers/(:num)', 'Dossiers::show/$1');
 $routes->get('dossiers/(:num)/phase-b', 'Dossiers::phaseB/$1');
+$routes->get('dossiers/(:num)/sarlu/decision', 'Dossiers::sarluDecision/$1');
 $routes->get('dossiers/(:num)/phase-b/planifier', 'Dossiers::phaseBPlanifier/$1');
 $routes->get('dossiers/(:num)/phase-b/jour-j', 'Dossiers::phaseBJourJ/$1');
 $routes->get('dossiers/(:num)/phase-b/jour-j/(:num)', 'Dossiers::phaseBJourJ/$1/$2');

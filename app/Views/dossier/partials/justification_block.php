@@ -6,14 +6,14 @@
 ?>
 <div class="card">
     <h3>Justification</h3>
-    <div class="actions" style="margin-top:0;">
+    <div class="actions">
         <?php
         $badge = 'secondary';
         if (($statut ?? '') === 'verifie') { $badge = 'success'; }
         if (($statut ?? '') === 'a_confirmer') { $badge = 'warning'; }
         if (($statut ?? '') === 'deduction') { $badge = 'secondary'; }
         ?>
-        <span class="button secondary" style="opacity:0.9; background:#e9edf3; color:#17324d;">
+        <span class="button link">
             <?= esc((string) ($statut ?? 'a_confirmer')) ?>
         </span>
     </div>

@@ -1,6 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Résolutions</h1>
+<div class="page-heading"><div><p class="help">Phase B · Étape 3</p><h1>Votes et résolutions</h1></div></div>
+<div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -29,10 +30,18 @@
         <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/voter') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="assemblee_id" value="<?= (int) $selectedAssemblee['id'] ?>">
-            <label class="field">Résolutions (une ligne = texte|pour|contre|abstention|blanc|vote du président)
-                <textarea name="resolutions" rows="10" placeholder="Exemple :&#10;Approbation du rapport annuel|8|1|0|0|&#10;Nomination du gérant|7|2|1|0|&#10;Vote CA à égalité|3|3|0|0|pour"></textarea>
-            </label>
-            <p>Pour une égalité au CA, indique le vote du président à la fin : <code>pour</code>, <code>contre</code> ou <code>abstention</code>. Laisse vide s’il n’est pas encore connu.</p>
+            <div id="resolutions">
+                <div class="grid resolution-row" data-row>
+                    <textarea name="resolutions_rows[0][texte]" rows="2" placeholder="Texte de la résolution" required></textarea>
+                    <input name="resolutions_rows[0][pour]" type="number" min="0" value="0" placeholder="Pour">
+                    <input name="resolutions_rows[0][contre]" type="number" min="0" value="0" placeholder="Contre">
+                    <input name="resolutions_rows[0][abstention]" type="number" min="0" value="0" placeholder="Abstention">
+                    <input name="resolutions_rows[0][blanc]" type="number" min="0" value="0" placeholder="Blanc">
+                    <select name="resolutions_rows[0][sens_vote_president]"><option value="">Voix prépondérante non utilisée</option><option value="pour">Président : pour</option><option value="contre">Président : contre</option><option value="abstention">Président : abstention</option></select>
+                </div>
+            </div>
+            <button type="button" class="button secondary" data-add="resolutions">Ajouter une résolution</button>
+            <p>Le formulaire accepte aussi le format texte si vous préférez saisir les résolutions en une seule zone.</p>
             <div class="actions">
                 <button type="submit">Enregistrer les votes</button>
             </div>

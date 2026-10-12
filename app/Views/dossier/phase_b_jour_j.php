@@ -1,6 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Jour J</h1>
+<div class="page-heading"><div><p class="help">Phase B · Étape 2</p><h1>Jour J</h1></div></div>
+<div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -116,6 +117,28 @@
                     <?php endif; ?>
                     <a class="button secondary" href="<?= site_url('pdf/proces-verbaux/' . $assemblee['id']) ?>">Générer / télécharger le PV PDF</a>
                 </section>
+                <section class="card">
+                    <h3>Participants convoqués</h3>
+                    <?php if (empty($convoques)): ?>
+                        <p>Aucun convoqué n’a été trouvé pour cette réunion.</p>
+                    <?php else: ?>
+                        <?php foreach ($convoques as $index => $convoque): ?>
+                            <div class="grid">
+                                <input type="hidden" name="participants_rows[<?= $index ?>][nom]" value="<?= esc($convoque['nom_affiche']) ?>">
+                                <strong><?= esc($convoque['nom_affiche']) ?></strong>
+                                <select name="participants_rows[<?= $index ?>][statut]">
+                                    <option value="present">Présent</option>
+                                    <option value="represente">Représenté</option>
+                                    <option value="absent">Absent</option>
+                                </select>
+                                <select name="participants_rows[<?= $index ?>][par]">
+                                    <option value="">Mandataire si représenté</option>
+                                    <?php foreach ($convoques as $mandataire): ?><option value="<?= esc($mandataire['nom_affiche']) ?>"><?= esc($mandataire['nom_affiche']) ?></option><?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </section>
             </div>
         </div>
     <?php endif; ?>
@@ -140,6 +163,16 @@
         <?php if (! empty($result['resume']['deuxieme_convocation']['possible'])): ?>
             <div class="notice">
                 Une 2e convocation est possible : n°<?= (int) ($result['resume']['deuxieme_convocation']['numero'] ?? 2) ?>
+                <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="nature" value="<?= esc($selectedReunion['nature_code'] ?? '') ?>">
+                    <input type="hidden" name="reunion_precedente_id" value="<?= (int) ($selectedReunion['id'] ?? 0) ?>">
+                    <label class="field">Nouvelle date <input type="date" name="date_reunion" required></label>
+                    <label class="field">Heure <input type="time" name="heure" value="09:00" required></label>
+                    <label class="field">Lieu <input type="text" name="lieu" value="<?= esc($selectedReunion['lieu'] ?? '') ?>" required></label>
+                    <input type="hidden" name="ordre_du_jour" value="">
+                    <button type="submit">Convoquer à nouveau</button>
+                </form>
             </div>
         <?php endif; ?>
     </div>

@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Libraries\DossierService;
 use App\Libraries\InterventionService;
 use App\Libraries\PhaseBService;
+use App\Libraries\SuiviDossierService;
+use App\Libraries\DecisionAssocieUniqueService;
 use App\Models\DossierModel;
 use App\Models\SocieteModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -12,10 +14,19 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class Dossiers extends BaseController
 {
+    public function sarluDecision(int $societeId): string
+    {
+        return view('dossier/sarlu_decision', [
+            'societeId' => $societeId,
+            ... (new DecisionAssocieUniqueService())->preparer($societeId),
+        ]);
+    }
+
     public function show(int $societeId): string
     {
         $data = (new DossierService())->afficher($societeId);
         $data['societeId'] = $societeId;
+        $data['suivi'] = (new SuiviDossierService())->etat($societeId);
         $data['reunions'] = db_connect()->table('reunion')
             ->where('societe_id', $societeId)
             ->orderBy('id', 'DESC')
@@ -106,6 +117,9 @@ class Dossiers extends BaseController
         $interventions = $assemblee && $interventionsTableReady
             ? (new InterventionService())->pourAssemblee((int) $assemblee['id'])
             : [];
+        $convoques = $selectedReunion
+            ? db_connect()->table('convoque')->where('reunion_id', $selectedReunion['id'])->orderBy('nom_affiche')->get()->getResultArray()
+            : [];
 
         return view('dossier/phase_b_jour_j', [
             'societe' => $societe,
@@ -118,6 +132,7 @@ class Dossiers extends BaseController
             'participantsPresents' => $participantsPresents,
             'interventions' => $interventions,
             'interventionsTableReady' => $interventionsTableReady,
+            'convoques' => $convoques,
             'result' => $result,
         ]);
     }
@@ -182,6 +197,7 @@ class Dossiers extends BaseController
         $ordreDuJour = preg_split('/\r\n|\r|\n/', (string) $this->request->getPost('ordre_du_jour'));
         $ordreDuJour = array_values(array_filter(array_map('trim', $ordreDuJour ?? []), static fn ($ligne): bool => $ligne !== ''));
         $numeroConvocation = (int) ($this->request->getPost('numero_convocation') ?: 1);
+        $reunionPrecedenteId = $this->request->getPost('reunion_precedente_id');
 
         $result = (new PhaseBService())->ecranPlanification(
             $societeId,
@@ -194,6 +210,7 @@ class Dossiers extends BaseController
             'franc',
             null,
             true,
+            $reunionPrecedenteId ? (int) $reunionPrecedenteId : null,
         );
 
         return redirect()->to('/dossiers/' . $societeId . '/phase-b/planifier')
@@ -205,22 +222,24 @@ class Dossiers extends BaseController
     {
         $reunionId = (int) $this->request->getPost('reunion_id');
         $participants = [];
-        $rawParticipants = preg_split('/\r\n|\r|\n/', (string) $this->request->getPost('participants'));
-        foreach ($rawParticipants ?? [] as $ligne) {
-            $ligne = trim((string) $ligne);
-            if ($ligne === '') {
-                continue;
+        $rows = $this->request->getPost('participants_rows');
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                if (is_array($row) && ! empty($row['nom'])) {
+                    $participants[] = [
+                        'nom' => (string) $row['nom'],
+                        'statut' => (string) ($row['statut'] ?? 'absent'),
+                        'par' => ! empty($row['par']) ? (string) $row['par'] : null,
+                    ];
+                }
             }
-            $parts = array_map('trim', explode(';', $ligne));
-            $nom = $parts[0] ?? '';
-            if ($nom === '') {
-                continue;
+        }
+        if ($participants === []) {
+            $rawParticipants = preg_split('/\r\n|\r|\n/', (string) $this->request->getPost('participants'));
+            foreach ($rawParticipants ?? [] as $ligne) {
+                $parts = array_map('trim', explode(';', trim((string) $ligne)));
+                if (! empty($parts[0])) $participants[] = ['nom' => $parts[0], 'statut' => $parts[1] ?? 'present', 'par' => $parts[2] ?? null];
             }
-            $participants[] = [
-                'nom' => $nom,
-                'statut' => $parts[1] ?? 'present',
-                'par' => $parts[2] ?? null,
-            ];
         }
 
         $result = (new PhaseBService())->ecranJourJ(
@@ -262,24 +281,36 @@ class Dossiers extends BaseController
     {
         $assembleeId = (int) $this->request->getPost('assemblee_id');
         $resolutions = [];
-        $rawResolutions = preg_split('/\r\n|\r|\n/', (string) $this->request->getPost('resolutions'));
-        foreach ($rawResolutions ?? [] as $ligne) {
-            $ligne = trim((string) $ligne);
-            if ($ligne === '') {
-                continue;
+        $rows = $this->request->getPost('resolutions_rows');
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                if (is_array($row) && ! empty($row['texte'])) {
+                    $resolutions[] = [
+                        'texte' => (string) $row['texte'],
+                        'pour' => (int) ($row['pour'] ?? 0),
+                        'contre' => (int) ($row['contre'] ?? 0),
+                        'abstention' => (int) ($row['abstention'] ?? 0),
+                        'blanc' => (int) ($row['blanc'] ?? 0),
+                        'sens_vote_president' => $row['sens_vote_president'] ?: null,
+                    ];
+                }
             }
-            $parts = array_map('trim', explode('|', $ligne));
-            if (count($parts) < 3) {
-                continue;
+        }
+        if ($resolutions === []) {
+            $rawResolutions = preg_split('/\r\n|\r|\n/', (string) $this->request->getPost('resolutions'));
+            foreach ($rawResolutions ?? [] as $ligne) {
+                $parts = array_map('trim', explode('|', trim((string) $ligne)));
+                if (! empty($parts[0]) && count($parts) >= 3) {
+                    $resolutions[] = [
+                        'texte' => $parts[0],
+                        'pour' => (int) $parts[1],
+                        'contre' => (int) $parts[2],
+                        'abstention' => (int) ($parts[3] ?? 0),
+                        'blanc' => (int) ($parts[4] ?? 0),
+                        'sens_vote_president' => isset($parts[5]) && $parts[5] !== '' ? strtolower($parts[5]) : null,
+                    ];
+                }
             }
-            $resolutions[] = [
-                'texte' => $parts[0],
-                'pour' => (int) $parts[1],
-                'contre' => (int) $parts[2],
-                'abstention' => (int) ($parts[3] ?? 0),
-                'blanc' => (int) ($parts[4] ?? 0),
-                'sens_vote_president' => isset($parts[5]) && $parts[5] !== '' ? strtolower($parts[5]) : null,
-            ];
         }
 
         $result = (new PhaseBService())->ecranVotes($assembleeId, $resolutions);
@@ -302,27 +333,13 @@ class Dossiers extends BaseController
     public function status(int $societeId): ResponseInterface
     {
         $status = (string) $this->request->getPost('statut');
-        $allowed = ['brouillon', 'soumis', 'valide', 'immatricule'];
-        if (! in_array($status, $allowed, true)) {
-            throw PageNotFoundException::forPageNotFound('Statut de dossier invalide.');
+        try {
+            $result = (new SuiviDossierService())->changerStatut($societeId, $status);
+        } catch (\RuntimeException $e) {
+            return redirect()->to('/dossiers/' . $societeId)
+                ->with('errors', ['bloquants' => [$e->getMessage()], 'avertissements' => [], 'infos' => []]);
         }
-
-        $dateSoumission = $this->request->getPost('date_soumission');
-        $dateValidation = $this->request->getPost('date_validation');
-        $dateImmatriculation = $this->request->getPost('date_immatriculation');
-        $dateDepot = $this->request->getPost('date_depot_prevue');
-        $dates = [
-            'date_depot_prevue' => $dateDepot ?: null,
-            'date_soumission' => $status === 'brouillon' ? null : ($dateSoumission ?: null),
-            'date_validation' => in_array($status, ['valide', 'immatricule'], true) ? ($dateValidation ?: null) : null,
-            'date_immatriculation' => $status === 'immatricule' ? ($dateImmatriculation ?: null) : null,
-        ];
-        $dossier = (new DossierModel())->where('societe_id', $societeId)->first();
-        if (! $dossier) {
-            (new DossierModel())->insert(['societe_id' => $societeId, 'statut' => $status] + $dates);
-        } else {
-            (new DossierModel())->update($dossier['id'], ['statut' => $status] + $dates);
-        }
-        return redirect()->to('/dossiers/' . $societeId);
+        return redirect()->to('/dossiers/' . $societeId)
+            ->with('success', $result['message']);
     }
 }

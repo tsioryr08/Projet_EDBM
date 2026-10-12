@@ -7,6 +7,7 @@ use App\Models\DirigeantModel;
 use App\Models\DossierModel;
 use App\Models\SocieteModel;
 use App\Models\TypeSocieteModel;
+use App\Libraries\DossierCreationService;
 use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
 
@@ -37,7 +38,7 @@ class Societes extends BaseController
             'siege' => 'permit_empty|max_length[255]',
             'objet' => 'permit_empty',
             'capital' => 'permit_empty|decimal',
-            'duree_annees' => 'permit_empty|is_natural|less_than_equal_to[99]',
+            'duree_annees' => 'permit_empty|is_natural',
         ]);
         if (! $validation->withRequest($this->request)->run()) {
             return view('societe/form', [
@@ -47,6 +48,8 @@ class Societes extends BaseController
             ]);
         }
 
+        $db = db_connect();
+        $db->transBegin();
         $societes = new SocieteModel();
         $societeId = $societes->insert([
             'type_societe_id' => (int) $this->request->getPost('type_societe_id'),
@@ -60,6 +63,7 @@ class Societes extends BaseController
             'activite_reglementee' => $this->request->getPost('activite_reglementee') ? 1 : 0,
         ]);
         if (! $societeId) {
+            $db->transRollback();
             throw new RuntimeException('Impossible d’enregistrer la société.');
         }
 
@@ -68,15 +72,31 @@ class Societes extends BaseController
             'statut'     => 'brouillon',
         ]);
         if (! $dossierId) {
+            $db->transRollback();
             throw new RuntimeException('Impossible de créer le dossier de la société.');
         }
 
         $this->saveRows((int) $societeId, new AssocieModel(), 'associes', [
-            'nom', 'categorie', 'apport', 'nb_titres', 'est_commandite',
+            'nom', 'categorie', 'date_naissance', 'mineur_non_emancipe',
+            'conjoint_de_associe_id', 'apport', 'nb_titres', 'est_commandite',
         ]);
         $this->saveRows((int) $societeId, new DirigeantModel(), 'dirigeants', [
-            'nom', 'fonction', 'nomme_par_statuts', 'actionnaire',
+            'associe_id', 'nom', 'fonction', 'nomme_par_statuts', 'actionnaire',
+            'date_nomination', 'fin_mandat',
         ]);
+        $type = (new TypeSocieteModel())->find((int) $this->request->getPost('type_societe_id'));
+        $evaluation = (new DossierCreationService())->evaluerDossier((int) $societeId, [
+            'type_societe' => is_array($type) ? $type['code'] : null,
+        ]);
+        if (! empty($evaluation['validite_creation']['bloquants'])) {
+            $db->transRollback();
+            return view('societe/form', [
+                'types' => (new TypeSocieteModel())->orderBy('code')->findAll(),
+                'errors' => $evaluation['validite_creation']['bloquants'],
+                'selectedType' => (int) $this->request->getPost('type_societe_id'),
+            ]);
+        }
+        $db->transCommit();
         return redirect()->to('/dossiers/' . $societeId);
     }
 

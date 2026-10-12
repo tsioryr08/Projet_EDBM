@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call('EtapeCreationSeeder');
         $this->call('RegleDelaiSeeder');
         $this->call('RegleQuorumSeeder');
+        $this->call('RegleValidationSeeder');
         $this->call('DocumentRequisSeeder');
     }
 }
