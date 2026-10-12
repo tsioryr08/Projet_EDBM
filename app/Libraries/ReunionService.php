@@ -74,6 +74,16 @@ class ReunionService
         }
 
         $regle = $this->delais->trouver((int) $societe['type_societe_id'], $nature, $numeroConvocation);
+        if (! $regle && $nature === 'CA' && $delaiStatuts !== null) {
+            $regle = [
+                'delai_jours' => $delaiStatuts,
+                'mode_calcul' => 'franc',
+                'forme_envoi' => null,
+                'source' => 'Statuts de la société (délai saisi manuellement)',
+                'verifie' => 0,
+                'note' => 'Délai à relever et à vérifier dans les statuts.',
+            ];
+        }
         if (! $regle) {
             throw new \RuntimeException(
                 "Règle de délai non renseignée pour {$type['code']} / {$nature} / convocation n°{$numeroConvocation} (à chercher dans la loi)."

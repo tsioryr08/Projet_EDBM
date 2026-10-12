@@ -10,5 +10,5 @@ class InterventionModel extends Model
     protected $primaryKey = 'id';
     protected $returnType = 'array';
     protected $useTimestamps = false;
-    protected $allowedFields = ['assemblee_id', 'participant_id', 'texte'];
+    protected $allowedFields = ['assemblee_id', 'participant_id', 'auteur_externe', 'texte'];
 }

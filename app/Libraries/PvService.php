@@ -35,9 +35,16 @@ final class PvService
             $lignes[] = 'Il est constaté que le quorum n’est pas atteint.';
             $lignes[] = 'La séance est annulée pour défaut de quorum.';
             $lignes[] = 'Aucune délibération ne peut être prise et aucun vote ne peut être validé.';
+            if (! empty($donnees['motif_quorum'])) {
+                $lignes[] = $donnees['motif_quorum'];
+            }
+            if (! empty($donnees['base_legale_non_quorum'])) {
+                $lignes[] = $donnees['base_legale_non_quorum'];
+            }
             if (! empty($donnees['pv_constat'])) {
                 $lignes[] = $donnees['pv_constat']['message'];
             }
+            $lignes[] = 'Constat consigné par le secrétaire de séance : ' . ($donnees['secretaire'] ?? 'non renseigné') . '.';
             return implode(PHP_EOL, $lignes);
         }
 

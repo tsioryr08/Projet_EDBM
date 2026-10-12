@@ -10,5 +10,5 @@ class PouvoirModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
-    protected $allowedFields = ['assemblee_id', 'mandant_id', 'mandataire_id', 'date_pouvoir', 'fichier'];
+    protected $allowedFields = ['assemblee_id', 'mandant_id', 'mandataire_id', 'mandataire_nom_externe', 'date_pouvoir', 'fichier'];
 }

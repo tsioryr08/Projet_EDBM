@@ -1,5 +1,6 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
+<?php $planningForm = $planningForm ?? []; ?>
 <div class="page-heading"><div><p class="help">Phase B · Étape 1</p><h1>Planifier une réunion</h1></div></div>
 <div class="tabs"><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
@@ -10,40 +11,46 @@
 
 <div class="card">
     <h2>1. Saisie de la réunion</h2>
+    <?php if (! empty($planningError)): ?><div class="notice"><?= esc($planningError) ?></div><?php endif; ?>
     <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">
         <?= csrf_field() ?>
         <div class="grid">
             <label class="field">Nature
-                <select name="nature" required>
-                    <option value="AGO">AGO</option>
-                    <option value="AGE">AGE</option>
-                    <option value="CA">CA</option>
+                <select name="nature" data-nature required>
+                    <option value="AGO" <?= ($planningForm['nature'] ?? '') === 'AGO' ? 'selected' : '' ?>>AGO</option>
+                    <option value="AGE" <?= ($planningForm['nature'] ?? '') === 'AGE' ? 'selected' : '' ?>>AGE</option>
+                    <option value="CA" <?= ($planningForm['nature'] ?? '') === 'CA' ? 'selected' : '' ?>>CA</option>
                 </select>
             </label>
             <label class="field">Date de réunion
-                <input type="date" name="date_reunion" required>
+                <input type="date" name="date_reunion" value="<?= esc($planningForm['date_reunion'] ?? '') ?>" required>
             </label>
             <label class="field">Heure
-                <input type="time" name="heure" value="09:00" required>
+                <input type="time" name="heure" value="<?= esc($planningForm['heure'] ?? '09:00') ?>" required>
             </label>
             <label class="field">Lieu
-                <input type="text" name="lieu" value="Siège social" required>
+                <input type="text" name="lieu" value="<?= esc($planningForm['lieu'] ?? 'Siège social') ?>" required>
             </label>
             <label class="field">Numéro de convocation
-                <input type="number" name="numero_convocation" min="1" value="1">
+                <input type="number" name="numero_convocation" min="1" value="<?= esc((string) ($planningForm['numero_convocation'] ?? 1)) ?>">
             </label>
             <label class="field">Réunion précédente (pour une 2e convocation)
                 <select name="reunion_precedente_id">
                     <option value="">Aucune</option>
                     <?php foreach ($reunions as $reunion): ?>
-                        <option value="<?= (int) $reunion['id'] ?>">#<?= (int) $reunion['id'] ?> — <?= esc($reunion['nature_code']) ?> — <?= esc($reunion['date_reunion']) ?></option>
+                        <option value="<?= (int) $reunion['id'] ?>" data-nature="<?= esc($reunion['nature_code']) ?>" <?= (int) ($planningForm['reunion_precedente_id'] ?? 0) === (int) $reunion['id'] ? 'selected' : '' ?>>#<?= (int) $reunion['id'] ?> — <?= esc($reunion['nature_code']) ?> — <?= esc($reunion['date_reunion']) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </label>
+            <?php $delaiStatutsAffiche = ($planningForm['nature'] ?? '') === 'CA'; ?>
+            <label class="field" data-delai-statuts-field <?= $delaiStatutsAffiche ? '' : 'hidden' ?> style="<?= $delaiStatutsAffiche ? '' : 'display:none' ?>">Délai prévu par les statuts (en jours)
+                <input type="number" name="delai_statuts" min="1" value="<?= esc((string) ($planningForm['delai_statuts'] ?? '')) ?>" data-delai-statuts <?= $delaiStatutsAffiche ? 'required' : 'disabled' ?>>
+                <small>Pour un CA, vérifie le délai et le mode de calcul dans les statuts. Le projet applique son calcul en jours francs.</small>
             </label>
         </div>
 
         <label class="field">Ordre du jour
-            <textarea name="ordre_du_jour" rows="6" placeholder="Exemple :&#10;1. Lecture et approbation du rapport&#10;2. Adoption des résolutions"></textarea>
+            <textarea name="ordre_du_jour" rows="6" placeholder="Exemple :&#10;1. Lecture et approbation du rapport&#10;2. Adoption des résolutions"><?= esc($planningForm['ordre_du_jour'] ?? '') ?></textarea>
         </label>
 
         <div class="actions">
@@ -51,6 +58,24 @@
         </div>
     </form>
 </div>
+
+<script>
+const natureSelect = document.querySelector('[data-nature]');
+const reunionPrecedenteSelect = document.querySelector('[name="reunion_precedente_id"]');
+const delaiStatutsField = document.querySelector('[data-delai-statuts-field]');
+const delaiStatutsInput = document.querySelector('[data-delai-statuts]');
+const actualiserDelaiStatuts = () => {
+    const previousNature = reunionPrecedenteSelect.selectedOptions[0]?.dataset.nature ?? '';
+    const requis = natureSelect.value === 'CA' || previousNature === 'CA';
+    delaiStatutsField.hidden = !requis;
+    delaiStatutsField.style.display = requis ? '' : 'none';
+    delaiStatutsInput.disabled = !requis;
+    delaiStatutsInput.required = requis;
+};
+natureSelect.addEventListener('change', actualiserDelaiStatuts);
+reunionPrecedenteSelect.addEventListener('change', actualiserDelaiStatuts);
+actualiserDelaiStatuts();
+</script>
 
 <?php if (! empty($preview)): ?>
     <div class="card">
@@ -74,8 +99,10 @@
             'message' => $just['message'] ?? null,
         ]) ?>
 
-        <h3>Convoqués</h3>
-        <?php $convoques = $preview['convoques'] ?? []; ?>
+        <?php $reunionCreee = $preview['reunion'] ?? []; ?>
+        <h3>Personnes convoquées</h3>
+        <p>La liste est constituée à partir des membres de la société : les associés/actionnaires pour une AG, les administrateurs pour un CA.</p>
+        <?php $convoques = $reunionCreee['convoques'] ?? []; ?>
         <?php if (empty($convoques)): ?>
             <p>Aucun convoqué inscrit pour l’instant.</p>
         <?php else: ?>
@@ -84,6 +111,12 @@
                     <li><?= esc((string) $nom) ?></li>
                 <?php endforeach; ?>
             </ul>
+        <?php endif; ?>
+        <?php if (! empty($reunionCreee['reunion_id'])): ?>
+            <div class="actions">
+                <a class="button" href="<?= site_url('pdf/convocations/' . (int) $reunionCreee['reunion_id']) ?>">Télécharger la convocation PDF</a>
+                <a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j?reunion_id=' . (int) $reunionCreee['reunion_id']) ?>">Passer au Jour J</a>
+            </div>
         <?php endif; ?>
     </div>
 <?php endif; ?>

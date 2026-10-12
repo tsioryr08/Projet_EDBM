@@ -7,6 +7,9 @@
 <?php if (session()->getFlashdata('success')): ?>
     <div class="notice"><?= esc(session()->getFlashdata('success')) ?></div>
 <?php endif; ?>
+<?php if (session()->getFlashdata('error')): ?>
+    <div class="notice"><?= esc(session()->getFlashdata('error')) ?></div>
+<?php endif; ?>
 
 <div class="card">
     <h2>1. Sélection de la réunion</h2>
@@ -44,9 +47,35 @@
                     </label>
                 </div>
 
-                <label class="field">Participants (une ligne par personne : nom;statut;mandataire si représenté)
-                    <textarea name="participants" rows="12" placeholder="Exemple :&#10;Dupont;present;&#10;Martin;represente;Dupont&#10;Bernard;absent;"></textarea>
-                </label>
+                <section class="card">
+                    <h3>Présence et représentation</h3>
+                    <p>Choisis le statut de chaque personne convoquée. Le mandataire est demandé uniquement si elle est représentée.</p>
+                    <?php if (empty($convoques)): ?>
+                        <p>Aucune personne convoquée n’est enregistrée pour cette réunion.</p>
+                    <?php else: ?>
+                        <?php foreach ($convoques as $index => $convoque): ?>
+                            <div class="grid participant-row" data-participant-row>
+                                <input type="hidden" name="participants_rows[<?= $index ?>][nom]" value="<?= esc($convoque['nom_affiche']) ?>">
+                                <strong><?= esc($convoque['nom_affiche']) ?></strong>
+                                <label class="field">Statut
+                                    <select name="participants_rows[<?= $index ?>][statut]" data-statut>
+                                        <option value="present">Présent</option>
+                                        <option value="represente">Absent, représenté</option>
+                                        <option value="absent">Absent, non représenté</option>
+                                    </select>
+                                </label>
+                                <label class="field" data-mandataire-field hidden>Mandataire
+                                    <select name="participants_rows[<?= $index ?>][par]" data-mandataire>
+                                        <option value="">Choisir une personne présente</option>
+                                        <?php foreach ($convoques as $mandataire): ?><option value="<?= esc($mandataire['nom_affiche']) ?>"><?= esc($mandataire['nom_affiche']) ?></option><?php endforeach; ?>
+                                        <?php if (($selectedReunion['nature_code'] ?? '') !== 'CA'): ?><option value="__autre__">Autre personne</option><?php endif; ?>
+                                    </select>
+                                    <input type="text" name="participants_rows[<?= $index ?>][autre_nom]" data-autre-nom placeholder="Nom du mandataire" hidden disabled>
+                                </label>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </section>
 
                 <div class="actions">
                     <button type="submit">Valider le jour J</button>
@@ -62,13 +91,19 @@
                 <strong>Secrétaire :</strong> <?= esc($assemblee['secretaire'] ?? '—') ?></p>
             <p><strong>Quorum :</strong> <?= ! empty($assemblee['quorum_atteint']) ? 'atteint' : 'non atteint' ?>
                 (<?= (int) ($assemblee['voix_presentes_ou_representees'] ?? 0) ?> / <?= (int) ($assemblee['voix_totales'] ?? 0) ?> voix)</p>
+            <p><strong>Seuil appliqué :</strong> <?= (int) ($assemblee['quorum_requis_num'] ?? 0) ?>/<?= (int) ($assemblee['quorum_requis_den'] ?? 1) ?></p>
+            <?php if (empty($assemblee['quorum_atteint'])): ?>
+                <div class="notice">Le quorum n’est pas atteint. Les présences sont enregistrées, mais le déroulement et les interventions ne sont pas accessibles. Prépare une nouvelle convocation si une règle correspondante est disponible.</div>
+            <?php endif; ?>
             <h3>Participants enregistrés</h3>
             <ul>
                 <?php foreach ($participantsAssemblee as $participant): ?>
                     <li><?= esc($participant['nom']) ?> — <?= esc($participant['statut']) ?><?php if ($participant['statut'] === 'present'): ?> (présent dans la salle)<?php endif; ?></li>
                 <?php endforeach; ?>
             </ul>
-            <a class="button" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j/' . $selectedReunion['id']) ?>">Continuer vers le déroulement</a>
+            <?php if (! empty($assemblee['quorum_atteint'])): ?>
+                <a class="button" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j/' . $selectedReunion['id']) ?>">Continuer vers le déroulement</a>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <div class="card">
@@ -81,27 +116,28 @@
                         (<?= (int) ($assemblee['voix_presentes_ou_representees'] ?? 0) ?> / <?= (int) ($assemblee['voix_totales'] ?? 0) ?> voix)</p>
                     <ul>
                         <?php foreach ($participantsAssemblee as $participant): ?>
-                            <li><?= esc($participant['nom']) ?> — <?= esc($participant['statut']) ?></li>
+                            <li><?= esc($participant['nom']) ?> — <?= esc($participant['statut']) ?><?php if ($participant['statut'] === 'represente' && ! empty($participant['mandataire_nom'])): ?> (mandataire : <?= esc($participant['mandataire_nom']) ?>)<?php endif; ?></li>
                         <?php endforeach; ?>
                     </ul>
                 </section>
                 <form class="card" method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/interventions') ?>">
                     <?= csrf_field() ?>
                     <input type="hidden" name="assemblee_id" value="<?= (int) $assemblee['id'] ?>">
-                    <label class="field">Personne présente
-                        <select name="participant_id" required>
+                    <label class="field">Personne qui parle
+                        <select name="auteur_selection" required>
                             <option value="">Choisir la personne qui parle</option>
-                            <?php foreach ($participantsPresents as $participant): ?>
-                                <option value="<?= (int) $participant['id'] ?>"><?= esc($participant['nom']) ?></option>
+                            <?php foreach ($intervenants as $intervenant): ?>
+                                <option value="<?= esc($intervenant['value']) ?>" <?= empty($intervenant['disponible']) ? 'disabled' : '' ?>><?= esc($intervenant['nom']) ?> — <?= esc($intervenant['precision']) ?><?= empty($intervenant['disponible']) ? ' (migration des interventions requise)' : '' ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
                     <label class="field">Ce qui a été dit
                         <textarea name="texte" rows="6" required placeholder="Résumé fidèle de l’intervention ou des échanges"></textarea>
                     </label>
-                    <button type="submit" <?= empty($participantsPresents) || empty($interventionsTableReady) ? 'disabled' : '' ?>>Ajouter au déroulement</button>
+                    <button type="submit" <?= empty($intervenants) || empty($interventionsTableReady) ? 'disabled' : '' ?>>Ajouter au déroulement</button>
                     <?php if (empty($participantsPresents)): ?><p>Aucun participant présent n’a été enregistré pour cette assemblée.</p><?php endif; ?>
                     <?php if (empty($interventionsTableReady)): ?><p>La table des interventions n’existe pas encore. La migration du projet doit être appliquée avant l’enregistrement.</p><?php endif; ?>
+                    <?php if (! empty($mandataireExternePresent) && empty($interventionAuteurReady)): ?><p>Le nom du mandataire apparaît dans la liste, mais la migration qui permet d’enregistrer son intervention n’est pas détectée par l’application.</p><?php endif; ?>
                 </form>
 
                 <section class="card">
@@ -117,32 +153,32 @@
                     <?php endif; ?>
                     <a class="button secondary" href="<?= site_url('pdf/proces-verbaux/' . $assemblee['id']) ?>">Générer / télécharger le PV PDF</a>
                 </section>
-                <section class="card">
-                    <h3>Participants convoqués</h3>
-                    <?php if (empty($convoques)): ?>
-                        <p>Aucun convoqué n’a été trouvé pour cette réunion.</p>
-                    <?php else: ?>
-                        <?php foreach ($convoques as $index => $convoque): ?>
-                            <div class="grid">
-                                <input type="hidden" name="participants_rows[<?= $index ?>][nom]" value="<?= esc($convoque['nom_affiche']) ?>">
-                                <strong><?= esc($convoque['nom_affiche']) ?></strong>
-                                <select name="participants_rows[<?= $index ?>][statut]">
-                                    <option value="present">Présent</option>
-                                    <option value="represente">Représenté</option>
-                                    <option value="absent">Absent</option>
-                                </select>
-                                <select name="participants_rows[<?= $index ?>][par]">
-                                    <option value="">Mandataire si représenté</option>
-                                    <?php foreach ($convoques as $mandataire): ?><option value="<?= esc($mandataire['nom_affiche']) ?>"><?= esc($mandataire['nom_affiche']) ?></option><?php endforeach; ?>
-                                </select>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </section>
             </div>
         </div>
     <?php endif; ?>
 <?php endif; ?>
+
+<script>
+document.querySelectorAll('[data-participant-row]').forEach((row) => {
+    const statut = row.querySelector('[data-statut]');
+    const field = row.querySelector('[data-mandataire-field]');
+    const select = row.querySelector('[data-mandataire]');
+    const autreNom = row.querySelector('[data-autre-nom]');
+    const refresh = () => {
+        const represente = statut.value === 'represente';
+        field.hidden = !represente;
+        select.required = represente;
+        select.disabled = !represente;
+        const autre = represente && select.value === '__autre__';
+        autreNom.hidden = !autre;
+        autreNom.disabled = !autre;
+        autreNom.required = autre;
+    };
+    statut.addEventListener('change', refresh);
+    select.addEventListener('change', refresh);
+    refresh();
+});
+</script>
 
 <?php if (! empty($result)): ?>
     <div class="card">

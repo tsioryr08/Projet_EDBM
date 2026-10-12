@@ -79,6 +79,26 @@ class Justification
         ];
     }
 
+    /** Base légale à afficher lorsqu'une séance ne peut pas délibérer faute de quorum. */
+    public function baseLegaleNonQuorum(string $typeSociete, string $nature, int $numeroConvocation, ?string $source = null): string
+    {
+        if ($typeSociete !== 'SA') {
+            return $source
+                ? "Règle enregistrée dans le projet : {$source}. Son application à cette forme sociale doit être confirmée avec les statuts et les textes applicables."
+                : 'La règle de quorum de cette forme sociale doit être vérifiée dans les statuts et les textes applicables.';
+        }
+
+        return match ($nature) {
+            'CA' => 'Loi n° 2003-036, articles 482 et 483 : les règles de convocation et de délibération du conseil sont fixées par les statuts ; le conseil ne délibère valablement que si tous ses membres ont été régulièrement convoqués et si au moins la moitié de ses membres sont présents, sauf quorum statutaire supérieur. Une décision prise en violation de cette règle est nulle. Point à vérifier : le calcul actuel du projet compte aussi les administrateurs représentés, alors que l’article 483 emploie le terme « présents ».',
+            'AGO' => $numeroConvocation === 1
+                ? 'Loi n° 2003-036, articles 536 et 570 : sur première convocation, l’AGO d’une SA exige au moins le quart des actions ayant droit de vote. Si ce quorum manque, l’avis de convocation suivant doit respecter le délai prévu à l’article 536 ; sur deuxième convocation, aucun quorum n’est requis selon l’article 570.'
+                : 'Loi n° 2003-036, articles 536 et 570 : l’avis de convocation suivant est porté à la connaissance des actionnaires au moins six jours avant l’assemblée ; sur deuxième convocation d’une AGO, aucun quorum n’est requis.',
+            'AGE' => 'Loi n° 2003-036, articles 536 et 574 : l’AGE d’une SA exige au moins la moitié des actions sur première convocation et le quart sur deuxième convocation. Si le quorum manque encore sur deuxième convocation, une troisième peut être tenue dans les deux mois suivant la date fixée pour la deuxième, avec le quorum du quart ; les convocations suivantes respectent le délai de l’article 536.',
+            'AGC' => 'Loi n° 2003-036, article 428 : l’assemblée constitutive exige la moitié des actions sur première convocation et le quart sur deuxième. Si le quorum manque encore, elle doit se tenir dans les deux mois de la date fixée pour la deuxième convocation ; la loi prévoit alors une troisième convocation avec le quorum du quart.',
+            default => $source ? "Règle enregistrée dans le projet : {$source}." : 'La règle applicable doit être vérifiée.',
+        };
+    }
+
     private function avertissementsQuorum(array $regle, int $totaux): ?string
     {
         $av = [];

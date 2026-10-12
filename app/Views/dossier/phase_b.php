@@ -3,7 +3,12 @@
 <div class="page-heading"><div><p class="help">Vie juridique</p><h1>Réunions et assemblées</h1><p class="help">Planifiez, tenez et documentez les décisions de la société.</p></div></div>
 <div class="tabs" role="tablist"><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">Vue d’ensemble</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <div class="alert alert-info" role="note">Les calculs de délai, quorum et majorité restent réalisés par les services métier.</div>
-<p><a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/sarlu/decision') ?>">Décision SARLU</a></p>
+<?php if (session()->getFlashdata('phase_b_error')): ?><div class="notice"><?= esc(session()->getFlashdata('phase_b_error')) ?></div><?php endif; ?>
+<?php if (($typeSociete['code'] ?? null) === 'SARLU'): ?>
+    <p><a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/sarlu/decision') ?>">Décision SARLU</a></p>
+<?php else: ?>
+    <p class="help">La décision de l’associé unique est disponible uniquement pour une SARLU. Forme de ce dossier : <?= esc($typeSociete['libelle'] ?? 'non renseignée') ?>.</p>
+<?php endif; ?>
 
 <div class="grid">
     <section class="card">

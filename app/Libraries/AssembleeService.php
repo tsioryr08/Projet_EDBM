@@ -70,8 +70,12 @@ class AssembleeService
         $nature  = $reunion['nature_code'];
         $numero  = (int) $reunion['numero_convocation'];
 
-        $regle = $this->quorums->trouver((int) $type['id'], $nature, $numero)
-            ?? throw new \RuntimeException("Règle de quorum non renseignée pour {$type['code']} / {$nature} / convocation n°{$numero} (à chercher dans la loi).");
+        $regle = $this->quorums->trouver((int) $type['id'], $nature, $numero);
+        if (! $regle && $nature === 'CA' && $numero > 1) {
+            // L'article 483 maintient le quorum du CA à chaque séance; les statuts peuvent prévoir davantage.
+            $regle = $this->quorums->trouver((int) $type['id'], $nature, 1);
+        }
+        $regle ??= throw new \RuntimeException("Règle de quorum non renseignée pour {$type['code']} / {$nature} / convocation n°{$numero} (à chercher dans la loi).");
 
         $voixTotales = $this->voixTotales($societe, $nature);
         $lignes      = $this->construireLignesParticipants($participants, $this->convoques->where('reunion_id', $reunionId)->findAll(), $nature);
@@ -143,6 +147,7 @@ class AssembleeService
             $this->validerParticipant($nom, $p, $nature);
             $lignes[$nom] = [
                 'nom' => $nom, 'statut' => $p['statut'], 'par' => $p['par'] ?? null,
+                'par_externe' => (bool) ($p['par_externe'] ?? false),
                 'voix' => (int) ($p['voix'] ?? $this->voixDe($listeParNom[$nom], $nature)),
                 'convoque_id' => (int) $listeParNom[$nom]['id'],
             ];
@@ -154,6 +159,7 @@ class AssembleeService
                     'nom' => $nom,
                     'statut' => 'absent',
                     'par' => null,
+                    'par_externe' => false,
                     'voix' => $this->voixDe($c, $nature),
                     'convoque_id' => (int) $c['id'],
                 ];
@@ -170,6 +176,9 @@ class AssembleeService
         }
         if ($p['statut'] === 'represente' && empty($p['par'])) {
             throw new \RuntimeException("{$nom} est représenté(e) : indiquez le mandataire (champ 'par').");
+        }
+        if (($p['par_externe'] ?? false) && $nature === 'CA') {
+            throw new \RuntimeException("Pour un conseil d'administration, le mandataire doit être choisi parmi les membres convoqués et présents.");
         }
     }
 
@@ -220,6 +229,15 @@ class AssembleeService
         $existants = [];
         foreach ($lignes as $nom => $ligne) {
             if ($ligne['statut'] !== 'represente') {
+                continue;
+            }
+            if (! empty($ligne['par_externe'])) {
+                $this->verifierInsertion($this->pouvoirs->insert([
+                    'assemblee_id' => $assembleeId,
+                    'mandant_id' => $ids[$nom],
+                    'mandataire_id' => null,
+                    'mandataire_nom_externe' => $ligne['par'],
+                ]), "mandataire externe de {$nom}");
                 continue;
             }
             if (! isset($ids[$ligne['par']]) || $lignes[$ligne['par']]['statut'] !== 'present') {
@@ -353,7 +371,7 @@ class AssembleeService
         $noms = array_column($parts, 'nom', 'id');
         $par  = [];
         foreach ($this->pouvoirs->where('assemblee_id', $assembleeId)->findAll() as $p) {
-            $par[$p['mandant_id']] = $noms[$p['mandataire_id']] ?? null;
+            $par[$p['mandant_id']] = ($p['mandataire_nom_externe'] ?? null) ?: ($noms[$p['mandataire_id']] ?? null);
         }
 
         $participants = [];
@@ -384,12 +402,14 @@ class AssembleeService
 
         $reunion = $this->reunions->find($assemblee['reunion_id']);
         $societe = $this->societes->find($reunion['societe_id']);
+        $typeSociete = $this->types->find($societe['type_societe_id']);
 
         $ordreDuJour = json_decode($reunion['ordre_du_jour'] ?? '[]', true);
 
         return [
             // --- la réunion (pour choisir le gabarit de PV et remplir l'en-tête) ---
             'societe'            => $societe['denomination'],
+            'type_societe'       => $typeSociete['code'] ?? '',
             'nature'             => $reunion['nature_code'],          // AGC | AGO | AGE | CA
             'numero_convocation' => (int) $reunion['numero_convocation'],
             'date_reunion'       => $reunion['date_reunion'],
@@ -419,6 +439,12 @@ class AssembleeService
             'resolutions'        => $resolutions,
             'source_regle'       => $regle['source'] ?? null,
             'regle_verifiee'     => (bool) ($regle['verifie'] ?? false),
+            'base_legale_non_quorum' => $this->justif->baseLegaleNonQuorum(
+                (string) ($typeSociete['code'] ?? ''),
+                (string) $reunion['nature_code'],
+                (int) $reunion['numero_convocation'],
+                $regle['source'] ?? null,
+            ),
         ];
     }
 

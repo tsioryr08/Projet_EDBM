@@ -13,6 +13,21 @@
     <tr><th>Quorum</th><td><?= htmlspecialchars((string) ($quorum_requis ?? 'Non renseigné'), ENT_QUOTES, 'UTF-8') ?> — <?= ! empty($quorum_atteint) ? 'atteint' : 'non atteint' ?></td></tr>
 </table>
 
+<?php if (empty($quorum_atteint)): ?>
+    <h2>Constat de défaut de quorum</h2>
+    <p>La réunion prévue le <?= htmlspecialchars((string) ($date_tenue ?? $date_reunion ?? '—'), ENT_QUOTES, 'UTF-8') ?> n’a pas pu délibérer. Le quorum requis n’étant pas atteint, aucune résolution ni aucun vote n’est consigné dans ce procès-verbal.</p>
+    <?php if (! empty($motif_quorum)): ?><p><?= htmlspecialchars((string) $motif_quorum, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
+    <?php if (! empty($base_legale_non_quorum)): ?><p><strong>Base légale / règle applicable :</strong> <?= htmlspecialchars((string) $base_legale_non_quorum, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
+    <?php if (! empty($source_regle)): ?><p><strong>Source de la règle de quorum :</strong> <?= htmlspecialchars((string) $source_regle, ENT_QUOTES, 'UTF-8') ?><?= empty($regle_verifiee) ? ' — à confirmer' : '' ?></p><?php endif; ?>
+    <p>Voix présentes ou représentées : <?= (int) ($voix_presentes_ou_representees ?? 0) ?> sur <?= (int) ($voix_totales ?? 0) ?>.</p>
+    <h3>Présences constatées</h3>
+    <ul>
+    <?php foreach (($participants ?? []) as $participant): ?>
+        <li><?= htmlspecialchars((string) $participant['nom'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars((string) $participant['statut'], ENT_QUOTES, 'UTF-8') ?><?= ! empty($participant['par']) ? ' (représenté par ' . htmlspecialchars((string) $participant['par'], ENT_QUOTES, 'UTF-8') . ')' : '' ?></li>
+    <?php endforeach; ?>
+    </ul>
+    <p>Constat consigné par le secrétaire de séance : <?= htmlspecialchars((string) ($secretaire ?? 'non renseigné'), ENT_QUOTES, 'UTF-8') ?>.</p>
+<?php else: ?>
 <?php if (! empty($motif_quorum)): ?>
     <div class="notice"><strong>Justification du quorum :</strong> <?= htmlspecialchars($motif_quorum, ENT_QUOTES, 'UTF-8') ?></div>
 <?php endif; ?>
@@ -50,7 +65,6 @@
         <?php endforeach; ?>
     </ol>
 <?php endif; ?>
-
 <h2>Résolutions et votes</h2>
 <?php if (empty($resolutions)): ?>
     <p class="notice">Aucune résolution n’est enregistrée.</p>
@@ -69,4 +83,5 @@
             <p><strong>Justification :</strong> <?= htmlspecialchars($resolution['motif'], ENT_QUOTES, 'UTF-8') ?></p>
         <?php endif; ?>
     <?php endforeach; ?>
+<?php endif; ?>
 <?php endif; ?>

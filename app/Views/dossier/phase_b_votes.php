@@ -25,7 +25,10 @@
 </div>
 
 <?php if (! empty($selectedAssemblee)): ?>
-    <div class="card">
+    <?php if (empty($selectedAssemblee['quorum_atteint'])): ?>
+        <div class="notice">Le quorum n’a pas été atteint pour cette réunion. Les résolutions et les votes ne peuvent pas être enregistrés.</div>
+    <?php else: ?>
+      <div class="card">
         <h2>1. Saisir les votes</h2>
         <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/voter') ?>">
             <?= csrf_field() ?>
@@ -46,7 +49,8 @@
                 <button type="submit">Enregistrer les votes</button>
             </div>
         </form>
-    </div>
+      </div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php if (! empty($result)): ?>
