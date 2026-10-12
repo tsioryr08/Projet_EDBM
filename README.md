@@ -399,3 +399,16 @@ git push --set-upstream origin feature-oli
 Le socle technique, Dompdf, les services métier et les écrans principaux sont
 présents. La validation sur une base MariaDB peuplée reste indispensable avant
 de considérer le workflow prêt pour la production.
+
+## Interface
+
+L’interface HTML utilise [`app/Views/layouts/main.php`](app/Views/layouts/main.php),
+[`public/assets/css/app.css`](public/assets/css/app.css) et
+[`public/assets/js/app.js`](public/assets/js/app.js). Les écrans existants
+restent accessibles par les mêmes routes ; [`app/Views/_layout.php`](app/Views/_layout.php)
+assure la compatibilité avec les anciennes vues.
+
+La charte et les conventions pour ajouter une page sont décrites dans
+[`docs/guide-interface.md`](docs/guide-interface.md). Les PDF utilisent
+[`public/assets/css/pdf.css`](public/assets/css/pdf.css), injecté dans le
+gabarit Dompdf pour rester autonome hors ligne.

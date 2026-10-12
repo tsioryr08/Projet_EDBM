@@ -45,4 +45,26 @@ final class WorkflowSurfaceTest extends CIUnitTestCase
         $this->assertStringContainsString("getPost('resolutions_rows')", $source);
         $this->assertStringContainsString('name="reunion_precedente_id"', file_get_contents(ROOTPATH . 'app/Views/dossier/phase_b_planifier.php'));
     }
+
+    public function testHtmlViewsUseTheSharedAssetsWithoutInlineBehaviour(): void
+    {
+        $files = [
+            ROOTPATH . 'app/Views/home/index.php',
+            ROOTPATH . 'app/Views/societe/type.php',
+            ROOTPATH . 'app/Views/societe/form.php',
+            ROOTPATH . 'app/Views/dossier/index.php',
+            ROOTPATH . 'app/Views/dossier/phase_b.php',
+            ROOTPATH . 'app/Views/dossier/phase_b_planifier.php',
+            ROOTPATH . 'app/Views/dossier/phase_b_jour_j.php',
+            ROOTPATH . 'app/Views/dossier/phase_b_votes.php',
+            ROOTPATH . 'app/Views/dossier/phase_b_registre.php',
+        ];
+        foreach ($files as $file) {
+            $source = file_get_contents($file);
+            $this->assertStringNotContainsString('style=', $source, $file);
+            $this->assertStringNotContainsString('<script', $source, $file);
+        }
+        $this->assertStringContainsString('assets/css/app.css', file_get_contents(ROOTPATH . 'app/Views/layouts/main.php'));
+        $this->assertStringContainsString('assets/js/app.js', file_get_contents(ROOTPATH . 'app/Views/layouts/main.php'));
+    }
 }
