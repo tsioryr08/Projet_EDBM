@@ -91,6 +91,7 @@ class PhaseBService
                 'voix_presentes_ou_representees' => $assemblee['voix_presentes_ou_representees'],
                 'voix_totales' => $assemblee['voix_totales'],
                 'justification' => $assemblee['justification'],
+                'deuxieme_convocation' => $assemblee['deuxieme_convocation'] ?? null,
             ],
         ];
     }
@@ -125,6 +126,7 @@ class PhaseBService
             $assemblee = $this->assemblees->where('reunion_id', $reunion['id'])->first();
             $registre[] = [
                 'reunion_id' => (int) $reunion['id'],
+                'assemblee_id' => isset($assemblee['id']) ? (int) $assemblee['id'] : null,
                 'nature' => $reunion['nature_code'],
                 'numero_convocation' => (int) $reunion['numero_convocation'],
                 'date_reunion' => $reunion['date_reunion'],

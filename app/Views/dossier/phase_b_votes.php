@@ -29,9 +29,10 @@
         <form method="post" action="<?= site_url('dossiers/' . $societeId . '/phase-b/voter') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="assemblee_id" value="<?= (int) $selectedAssemblee['id'] ?>">
-            <label class="field">Résolutions (une ligne = texte|pour|contre|abstention|blanc)
-                <textarea name="resolutions" rows="10" placeholder="Exemple :&#10;Approbation du rapport annuel|8|1|0|0&#10;Nomination du gérant|7|2|1|0"></textarea>
+            <label class="field">Résolutions (une ligne = texte|pour|contre|abstention|blanc|vote du président)
+                <textarea name="resolutions" rows="10" placeholder="Exemple :&#10;Approbation du rapport annuel|8|1|0|0|&#10;Nomination du gérant|7|2|1|0|&#10;Vote CA à égalité|3|3|0|0|pour"></textarea>
             </label>
+            <p>Pour une égalité au CA, indique le vote du président à la fin : <code>pour</code>, <code>contre</code> ou <code>abstention</code>. Laisse vide s’il n’est pas encore connu.</p>
             <div class="actions">
                 <button type="submit">Enregistrer les votes</button>
             </div>
@@ -42,12 +43,13 @@
 <?php if (! empty($result)): ?>
     <div class="card">
         <h2>2. Résultat des décisions</h2>
-        <?php foreach ($result as $resolution): ?>
+        <?php foreach (($result['resultat'] ?? []) as $resolution): ?>
             <div class="card" style="background:#f9fbfc;">
                 <h3>Résolution n°<?= (int) ($resolution['numero'] ?? 1) ?></h3>
                 <p><strong>Texte :</strong> <?= esc((string) ($resolution['texte'] ?? '—')) ?></p>
                 <p><strong>Pour :</strong> <?= (int) ($resolution['pour'] ?? 0) ?> — <strong>Contre :</strong> <?= (int) ($resolution['contre'] ?? 0) ?> — <strong>Abstention :</strong> <?= (int) ($resolution['abstention'] ?? 0) ?> — <strong>Blanc :</strong> <?= (int) ($resolution['blanc'] ?? 0) ?></p>
-                <p><strong>Décision :</strong> <?= ($resolution['adoptee'] ?? false) ? 'Adoptée' : 'Rejetée' ?></p>
+                <?php if (! empty($resolution['sens_vote_president'])): ?><p><strong>Vote du président :</strong> <?= esc($resolution['sens_vote_president']) ?></p><?php endif; ?>
+                <p><strong>Décision :</strong> <?= ($resolution['adoptee'] ?? null) === null ? 'En attente du vote du président' : ($resolution['adoptee'] ? 'Adoptée' : 'Rejetée') ?></p>
                 <?php $just = $resolution['justification'] ?? []; ?>
                 <?= view('dossier/partials/justification_block', [
                     'motif' => $just['motif'] ?? null,

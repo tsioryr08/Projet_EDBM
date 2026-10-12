@@ -20,6 +20,7 @@ $routes->get('dossiers/(:num)/phase-b/votes/(:num)', 'Dossiers::phaseBVotes/$1/$
 $routes->get('dossiers/(:num)/phase-b/registre', 'Dossiers::phaseBRegistre/$1');
 $routes->post('dossiers/(:num)/phase-b/planifier', 'Dossiers::planifierPhaseB/$1');
 $routes->post('dossiers/(:num)/phase-b/tenir', 'Dossiers::tenirPhaseB/$1');
+$routes->post('dossiers/(:num)/phase-b/interventions', 'Dossiers::ajouterIntervention/$1');
 $routes->post('dossiers/(:num)/phase-b/voter', 'Dossiers::voterPhaseB/$1');
 $routes->post('dossiers/(:num)/pieces/(:num)', 'Dossiers::piece/$1/$2');
 $routes->post('dossiers/(:num)/statut', 'Dossiers::status/$1');

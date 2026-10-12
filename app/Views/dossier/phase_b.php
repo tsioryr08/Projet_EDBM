@@ -60,7 +60,7 @@
                         <td><?= esc($reunion['lieu']) ?></td>
                         <td><?= esc($reunion['statut']) ?></td>
                         <td>
-                            <a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j/' . $reunion['id']) ?>">Jour J</a>
+                            <a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j?reunion_id=' . $reunion['id']) ?>">Jour J</a>
                             <a class="button secondary" href="<?= site_url('pdf/convocations/' . $reunion['id']) ?>">Convocation PDF</a>
                         </td>
                     </tr>

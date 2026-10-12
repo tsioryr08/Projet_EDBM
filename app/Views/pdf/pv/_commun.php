@@ -39,6 +39,18 @@
 <?php endforeach; ?>
 </ol>
 
+<h2>Déroulement de la séance</h2>
+<?php if (empty($interventions)): ?>
+    <p>Aucune intervention n’a été consignée.</p>
+<?php else: ?>
+    <ol>
+        <?php foreach ($interventions as $intervention): ?>
+            <li><strong><?= htmlspecialchars((string) $intervention['auteur'], ENT_QUOTES, 'UTF-8') ?> :</strong>
+                <?= nl2br(htmlspecialchars((string) $intervention['texte'], ENT_QUOTES, 'UTF-8')) ?></li>
+        <?php endforeach; ?>
+    </ol>
+<?php endif; ?>
+
 <h2>Résolutions et votes</h2>
 <?php if (empty($resolutions)): ?>
     <p class="notice">Aucune résolution n’est enregistrée.</p>

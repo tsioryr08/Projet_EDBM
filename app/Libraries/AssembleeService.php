@@ -296,6 +296,8 @@ class AssembleeService
             $resultats[] = [
                 'numero' => $numero, 'texte' => $r['texte'],
                 'pour' => $voix['pour'], 'contre' => $voix['contre'],
+                'abstention' => $voix['abstention'], 'blanc' => $voix['blanc'],
+                'sens_vote_president' => $sensPresident,
                 'majorite_requise' => $regle['majorite_num'] . '/' . $regle['majorite_den'],
                 'adoptee' => $adoptee,                  // true | false | null (en attente de la voix du président)
                 'en_attente_voix_president' => $enAttente,

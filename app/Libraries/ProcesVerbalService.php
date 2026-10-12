@@ -9,6 +9,7 @@ class ProcesVerbalService
     public function preparer(int $assembleeId): array
     {
         $data = (new AssembleeService())->versJson($assembleeId);
+        $data['interventions'] = (new InterventionService())->pourAssemblee($assembleeId);
         $nature = (string) $data['nature'];
         $vue = $nature === 'CA' ? 'pdf/pv/ca' : ($nature === 'AGC' ? 'pdf/pv/constitutif' : 'pdf/pv/assemblee');
         $pdfNature = $nature === 'CA' ? 'pv_conseil_administration'

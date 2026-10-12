@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\DossierService;
+use App\Libraries\InterventionService;
 use App\Libraries\PhaseBService;
 use App\Models\DossierModel;
 use App\Models\SocieteModel;
@@ -78,6 +79,8 @@ class Dossiers extends BaseController
 
     public function phaseBJourJ(int $societeId, ?int $reunionId = null): string
     {
+        $etapeDeroulement = $reunionId !== null || $this->request->getGet('etape') === 'deroulement';
+        $reunionId ??= (int) ($this->request->getGet('reunion_id') ?: 0) ?: null;
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -92,18 +95,36 @@ class Dossiers extends BaseController
         $selectedReunion = $reunionId !== null
             ? db_connect()->table('reunion')->where('id', $reunionId)->where('societe_id', $societeId)->get()->getRowArray()
             : null;
+        $assemblee = $selectedReunion
+            ? db_connect()->table('assemblee')->where('reunion_id', $selectedReunion['id'])->get()->getRowArray()
+            : null;
+        $participantsAssemblee = $assemblee
+            ? db_connect()->table('participant')->where('assemblee_id', $assemblee['id'])->orderBy('nom')->get()->getResultArray()
+            : [];
+        $participantsPresents = array_values(array_filter($participantsAssemblee, static fn (array $p): bool => $p['statut'] === 'present'));
+        $interventionsTableReady = db_connect()->tableExists('intervention');
+        $interventions = $assemblee && $interventionsTableReady
+            ? (new InterventionService())->pourAssemblee((int) $assemblee['id'])
+            : [];
 
         return view('dossier/phase_b_jour_j', [
             'societe' => $societe,
             'societeId' => $societeId,
             'reunions' => $reunions,
             'selectedReunion' => $selectedReunion,
+            'assemblee' => $assemblee,
+            'etapeDeroulement' => $etapeDeroulement,
+            'participantsAssemblee' => $participantsAssemblee,
+            'participantsPresents' => $participantsPresents,
+            'interventions' => $interventions,
+            'interventionsTableReady' => $interventionsTableReady,
             'result' => $result,
         ]);
     }
 
     public function phaseBVotes(int $societeId, ?int $assembleeId = null): string
     {
+        $assembleeId ??= (int) ($this->request->getGet('assemblee_id') ?: 0) ?: null;
         $societe = (new SocieteModel())->find($societeId);
         if (! $societe) {
             throw PageNotFoundException::forPageNotFound('Société introuvable.');
@@ -210,9 +231,31 @@ class Dossiers extends BaseController
             (string) $this->request->getPost('date_tenue') ?: null,
         );
 
-        return redirect()->to('/dossiers/' . $societeId . '/phase-b/jour-j')
+        return redirect()->to('/dossiers/' . $societeId . '/phase-b/jour-j/' . $reunionId)
             ->with('phase_b_jour_j', $result)
             ->with('success', 'Assemblée tenue : quorum ' . (($result['resume']['quorum_atteint']) ? 'atteint' : 'non atteint'));
+    }
+
+    public function ajouterIntervention(int $societeId): ResponseInterface
+    {
+        $assembleeId = (int) $this->request->getPost('assemblee_id');
+        $participantId = (int) $this->request->getPost('participant_id');
+        $texte = (string) $this->request->getPost('texte');
+        $assemblee = db_connect()->table('assemblee a')
+            ->select('a.id, a.reunion_id')
+            ->join('reunion r', 'r.id = a.reunion_id')
+            ->where('a.id', $assembleeId)
+            ->where('r.societe_id', $societeId)
+            ->get()->getRowArray();
+
+        if (! $assemblee) {
+            throw PageNotFoundException::forPageNotFound('Assemblée introuvable pour cette société.');
+        }
+
+        (new InterventionService())->ajouter($assembleeId, $participantId, $texte);
+
+        return redirect()->to('/dossiers/' . $societeId . '/phase-b/jour-j/' . $assemblee['reunion_id'])
+            ->with('success', 'Intervention ajoutée au déroulement de la réunion.');
     }
 
     public function voterPhaseB(int $societeId): ResponseInterface
@@ -233,6 +276,9 @@ class Dossiers extends BaseController
                 'texte' => $parts[0],
                 'pour' => (int) $parts[1],
                 'contre' => (int) $parts[2],
+                'abstention' => (int) ($parts[3] ?? 0),
+                'blanc' => (int) ($parts[4] ?? 0),
+                'sens_vote_president' => isset($parts[5]) && $parts[5] !== '' ? strtolower($parts[5]) : null,
             ];
         }
 

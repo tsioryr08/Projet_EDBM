@@ -28,7 +28,11 @@
                         <td><?= ! empty($ligne['quorum_atteint']) ? 'Atteint' : 'Manquant' ?></td>
                         <td><?= esc((string) ($ligne['president'] ?? '—')) ?></td>
                         <td>
-                            <a class="button secondary" href="<?= site_url('pdf/proces-verbaux/' . ($ligne['reunion_id'] ?? 0)) ?>">PV PDF</a>
+                            <?php if (! empty($ligne['assemblee_id'])): ?>
+                                <a class="button secondary" href="<?= site_url('pdf/proces-verbaux/' . $ligne['assemblee_id']) ?>">PV PDF</a>
+                            <?php else: ?>
+                                <span>Assemblée non tenue</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
