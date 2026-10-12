@@ -1,7 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Suivi du dossier — <?= esc($societe['denomination']) ?></h1>
-<p class="notice">Les dates de réunion, délais, quorums et majorités ne sont pas recalculés par l’interface : ils sont affichés depuis les données métier enregistrées.</p>
+<div class="page-heading"><div><p class="help">Dossier de société</p><h1><?= esc($societe['denomination']) ?></h1><p class="help">Suivi de la constitution et accès aux documents juridiques.</p></div><span class="status-badge <?= ($dossier['statut'] ?? '') === 'immatricule' ? 'success' : 'warning' ?>"><?= esc($dossier['statut'] ?? 'brouillon') ?></span></div>
+<div class="alert alert-info" role="note">Les dates, délais, quorums et majorités sont affichés depuis les données métier ; l’interface ne les recalcule pas.</div>
 <?php if (session()->getFlashdata('success')): ?>
     <div class="notice"><?= esc(session()->getFlashdata('success')) ?></div>
 <?php endif; ?>
@@ -10,12 +10,12 @@
     <div class="error"><strong>Erreurs bloquantes</strong><ul><?php foreach ($messages['bloquants'] as $message): ?><li><?= esc($message) ?></li><?php endforeach; ?></ul></div>
 <?php endif; ?>
 <?php if ($dossier): ?>
-    <p><strong>Statut :</strong> <?= esc($dossier['statut']) ?></p>
+    <div class="stepper"><div class="step <?= $dossier['statut'] === 'brouillon' ? 'active' : 'done' ?>">Brouillon</div><div class="step <?= $dossier['statut'] === 'soumis' ? 'active' : ($dossier['statut'] === 'brouillon' ? '' : 'done') ?>">Soumis</div><div class="step <?= $dossier['statut'] === 'valide' ? 'active' : (in_array($dossier['statut'], ['immatricule'], true) ? 'done' : '') ?>">Validé</div><div class="step <?= $dossier['statut'] === 'immatricule' ? 'active' : '' ?>">Immatriculé</div></div>
     <p>Soumission : <?= esc($dossier['date_soumission'] ?? 'Non renseignée') ?> —
         Validation : <?= esc($dossier['date_validation'] ?? 'Non renseignée') ?> —
         Immatriculation : <?= esc($dossier['date_immatriculation'] ?? 'Non renseignée') ?></p>
 
-    <div class="card">
+    <div class="card" id="documents">
         <h2>Réunions et assemblées</h2>
         <p>Accédez au workflow de la phase B pour planifier les réunions, tenir l’assemblée, enregistrer les votes et consulter le registre.</p>
         <div class="actions">
@@ -81,14 +81,14 @@
         <?php endforeach; ?>
     </div>
 </div>
-<h2>Pièces requises</h2>
-<table border="1" cellpadding="5">
+<div class="page-heading"><h2>Pièces requises</h2><span class="help"><?= count($documents) ?> document(s) référencé(s)</span></div>
+<div class="table-wrap"><table>
 <tr><th>Catégorie</th><th>Document</th><th>État</th><th>Source / note</th><th>Action</th></tr>
 <?php foreach ($documents as $document): ?>
 <tr>
     <td><?= esc($document['categorie']) ?></td>
     <td><?= esc($document['libelle']) ?></td>
-    <td><?= esc($document['etat']) ?></td>
+    <td><span class="status-badge <?= in_array($document['etat'], ['fournie', 'conforme'], true) ? 'success' : (in_array($document['etat'], ['périmée', 'expiree'], true) ? 'error' : 'warning') ?>"><?= esc($document['etat']) ?></span></td>
     <td><?= esc($document['note'] ?? '') ?></td>
     <td>
         <form method="post" action="<?= site_url('dossiers/' . $societe['id'] . '/pieces/' . $document['id']) ?>">
@@ -100,7 +100,7 @@
     </td>
 </tr>
 <?php endforeach; ?>
-</table>
+</table></div>
 <h2>Étapes EDBM</h2>
 <ol><?php foreach ($etapes as $etape): ?><li><?= esc($etape['libelle']) ?> — <?= esc($etape['source'] ?? '') ?></li><?php endforeach; ?></ol>
 <?= view('dossier/bail_link', ['bailUrl' => getenv('BAIL_GENERATOR_URL') ?: null]) ?>

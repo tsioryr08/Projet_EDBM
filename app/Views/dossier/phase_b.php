@@ -1,8 +1,9 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Réunions et assemblées</h1>
-<p class="notice">L’écran de gestion de la phase B regroupe la planification, le jour J, le vote des résolutions et le registre des assemblées.</p>
-<p><a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/sarlu/decision') ?>">Parcours décision SARLU</a></p>
+<div class="page-heading"><div><p class="help">Vie juridique</p><h1>Réunions et assemblées</h1><p class="help">Planifiez, tenez et documentez les décisions de la société.</p></div></div>
+<div class="tabs" role="tablist"><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">Vue d’ensemble</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
+<div class="alert alert-info" role="note">Les calculs de délai, quorum et majorité restent réalisés par les services métier.</div>
+<p><a class="button secondary" href="<?= site_url('dossiers/' . $societeId . '/sarlu/decision') ?>">Décision SARLU</a></p>
 
 <div class="grid">
     <section class="card">

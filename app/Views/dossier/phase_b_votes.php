@@ -1,6 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Résolutions</h1>
+<div class="page-heading"><div><p class="help">Phase B · Étape 3</p><h1>Votes et résolutions</h1></div></div>
+<div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -30,7 +31,7 @@
             <?= csrf_field() ?>
             <input type="hidden" name="assemblee_id" value="<?= (int) $selectedAssemblee['id'] ?>">
             <div id="resolutions">
-                <div class="grid resolution-row">
+                <div class="grid resolution-row" data-row>
                     <textarea name="resolutions_rows[0][texte]" rows="2" placeholder="Texte de la résolution" required></textarea>
                     <input name="resolutions_rows[0][pour]" type="number" min="0" value="0" placeholder="Pour">
                     <input name="resolutions_rows[0][contre]" type="number" min="0" value="0" placeholder="Contre">
@@ -39,7 +40,7 @@
                     <select name="resolutions_rows[0][sens_vote_president]"><option value="">Voix prépondérante non utilisée</option><option value="pour">Président : pour</option><option value="contre">Président : contre</option><option value="abstention">Président : abstention</option></select>
                 </div>
             </div>
-            <button type="button" class="button secondary" id="add-resolution">Ajouter une résolution</button>
+            <button type="button" class="button secondary" data-add="resolutions">Ajouter une résolution</button>
             <div class="actions">
                 <button type="submit">Enregistrer les votes</button>
             </div>
@@ -51,7 +52,7 @@
     <div class="card">
         <h2>2. Résultat des décisions</h2>
         <?php foreach ($result as $resolution): ?>
-            <div class="card" style="background:#f9fbfc;">
+            <div class="card">
                 <h3>Résolution n°<?= (int) ($resolution['numero'] ?? 1) ?></h3>
                 <p><strong>Texte :</strong> <?= esc((string) ($resolution['texte'] ?? '—')) ?></p>
                 <p><strong>Pour :</strong> <?= (int) ($resolution['pour'] ?? 0) ?> — <strong>Contre :</strong> <?= (int) ($resolution['contre'] ?? 0) ?> — <strong>Abstention :</strong> <?= (int) ($resolution['abstention'] ?? 0) ?> — <strong>Blanc :</strong> <?= (int) ($resolution['blanc'] ?? 0) ?></p>
@@ -68,18 +69,4 @@
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
-<script>
-document.getElementById('add-resolution')?.addEventListener('click', function () {
-    const container = document.getElementById('resolutions');
-    const index = container.querySelectorAll('.resolution-row').length;
-    const clone = container.querySelector('.resolution-row').cloneNode(true);
-    clone.querySelectorAll('input, textarea, select').forEach(function (field) {
-        field.name = field.name.replace(/\[\d+\]/, '[' + index + ']');
-        if (field.tagName === 'TEXTAREA') field.value = '';
-        else if (field.tagName === 'INPUT') field.value = '0';
-        else field.selectedIndex = 0;
-    });
-    container.appendChild(clone);
-});
-</script>
 <?= $this->endSection() ?>

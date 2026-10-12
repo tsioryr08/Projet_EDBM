@@ -1,6 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Registre des assemblées</h1>
+<div class="page-heading"><div><p class="help">Phase B · Étape 4</p><h1>Registre des assemblées</h1><p class="help"><?= esc($societe['denomination']) ?></p></div></div>
+<div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
 
 <div class="card">
@@ -8,7 +9,7 @@
     <?php if (empty($registre)): ?>
         <p>Aucune assemblée n’a encore été tenue.</p>
     <?php else: ?>
-        <table>
+        <div class="table-wrap"><table>
             <thead>
                 <tr>
                     <th>Nature</th>
@@ -25,7 +26,7 @@
                         <td><?= esc((string) ($ligne['nature'] ?? '—')) ?></td>
                         <td><?= (int) ($ligne['numero_convocation'] ?? 1) ?></td>
                         <td><?= esc((string) ($ligne['date_reunion'] ?? '—')) ?></td>
-                        <td><?= ! empty($ligne['quorum_atteint']) ? 'Atteint' : 'Manquant' ?></td>
+                        <td><span class="status-badge <?= ! empty($ligne['quorum_atteint']) ? 'success' : 'error' ?>"><?= ! empty($ligne['quorum_atteint']) ? 'Atteint' : 'Non atteint' ?></span></td>
                         <td><?= esc((string) ($ligne['president'] ?? '—')) ?></td>
                         <td>
                             <?php if (! empty($ligne['assemblee_id'])): ?>
@@ -37,7 +38,7 @@
                     </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
     <?php endif; ?>
 </div>
 <?= $this->endSection() ?>

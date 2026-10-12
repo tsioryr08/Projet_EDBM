@@ -1,6 +1,7 @@
 <?= $this->extend('_layout') ?>
 <?= $this->section('content') ?>
-<h1>Phase B — Jour J</h1>
+<div class="page-heading"><div><p class="help">Phase B · Étape 2</p><h1>Jour J</h1></div></div>
+<div class="tabs"><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/planifier') ?>">Planifier</a><a class="active" href="<?= site_url('dossiers/' . $societeId . '/phase-b/jour-j') ?>">Jour J</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/votes') ?>">Votes</a><a href="<?= site_url('dossiers/' . $societeId . '/phase-b/registre') ?>">Registre</a></div>
 <p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
 
 <?php if (session()->getFlashdata('success')): ?>
