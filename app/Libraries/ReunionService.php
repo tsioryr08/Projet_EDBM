@@ -81,9 +81,6 @@ class ReunionService
         }
 
         $delai = $regle['delai_jours'] !== null ? (int) $regle['delai_jours'] : $delaiStatuts;
-        if ($numeroConvocation === 2 && $delai !== 6) {
-            $delai = 6;
-        }
         if ($delai === null) {
             throw new \RuntimeException("Le délai de {$nature} est fixé par les statuts : indiquez-le (paramètre delaiStatuts).");
         }

@@ -5,6 +5,7 @@ namespace App\Libraries;
 use App\Models\AssocieModel;
 use App\Models\DirigeantModel;
 use App\Models\SocieteModel;
+use App\Models\RegleValidationModel;
 use App\Models\TypeSocieteModel;
 
 /**
@@ -21,9 +22,11 @@ class DossierCreationService
     public function __construct(
         private ?SocieteService $societeService = null,
         private ?DocumentChecklistService $checklistService = null,
+        private ?RegleValidationModel $reglesValidation = null,
     ) {
         $this->societeService = $societeService ?? new SocieteService();
         $this->checklistService = $checklistService ?? new DocumentChecklistService();
+        $this->reglesValidation = $reglesValidation ?? new RegleValidationModel();
     }
 
     /**
@@ -103,42 +106,64 @@ class DossierCreationService
     {
         $bloquants = [];
         $warnings = [];
+        $type = (new TypeSocieteModel())->where('code', strtoupper($typeSociete))->first();
+        $typeId = is_array($type) ? (int) $type['id'] : null;
+
+        $ajouterRegleAbsente = function (string $code) use (&$bloquants): void {
+            $bloquants[] = "Règle de validation {$code} absente de la base : contrôle impossible, à confirmer.";
+        };
+        $appliquerPlage = function (string $code, float $valeur) use (&$bloquants, &$warnings, $typeId, $ajouterRegleAbsente): ?array {
+            $regle = $this->reglesValidation->trouver($code, $typeId);
+            if (! $regle) {
+                $ajouterRegleAbsente($code);
+                return null;
+            }
+            $horsMin = $regle['valeur_min'] !== null && $valeur < (float) $regle['valeur_min'];
+            $horsMax = $regle['valeur_max'] !== null && $valeur > (float) $regle['valeur_max'];
+            if ($horsMin || $horsMax) {
+                ($regle['severite'] ?? 'bloquant') === 'avertissement'
+                    ? $warnings[] = $regle['message']
+                    : $bloquants[] = $regle['message'];
+            }
+            return $regle;
+        };
 
         $nbAdministrateurs = count($dirigeants);
-        if ($nbAdministrateurs < 3 || $nbAdministrateurs > 12) {
-            $bloquants[] = 'Le nombre d’administrateurs doit être compris entre 3 et 12 (art. 439).';
-        }
-
-        if ($nbAdministrateurs % 2 === 0) {
-            $warnings[] = 'Nombre d’administrateurs pair : avertissement uniquement, pas un blocage.';
-        }
-
-        $nonActionnaires = array_values(array_filter($dirigeants, static function (array $dirigeant): bool {
-            return isset($dirigeant['actionnaire']) && ((bool) $dirigeant['actionnaire']) === false;
-        }));
-
-        if ($nbAdministrateurs > 0 && count($nonActionnaires) / $nbAdministrateurs > 1 / 3) {
-            $bloquants[] = 'Le nombre de non-actionnaires ne peut pas dépasser un tiers des administrateurs (art. 440).';
-        }
-
-        $agObligatoire = count($associes) <= 3;
-        if ($agObligatoire && ! $this->contientFonction($dirigeants, ['administrateur_general', 'administrateur général', 'administrateur general', 'ag'])) {
-            $bloquants[] = 'Administrateur général obligatoire si la société compte 3 actionnaires ou moins (art. 519).';
+        if (strtoupper($typeSociete) === 'SA') {
+            $appliquerPlage('SA_ADMINISTRATEURS', $nbAdministrateurs);
+            $parite = $this->reglesValidation->trouver('SA_ADMIN_PARITE', $typeId);
+            if (! $parite) {
+                $ajouterRegleAbsente('SA_ADMIN_PARITE');
+            } elseif ($nbAdministrateurs % 2 === 0) {
+                ($parite['severite'] ?? 'avertissement') === 'avertissement'
+                    ? $warnings[] = $parite['message']
+                    : $bloquants[] = $parite['message'];
+            }
+            $nonActionnaires = count(array_filter($dirigeants, static fn (array $dirigeant): bool => isset($dirigeant['actionnaire']) && ! (bool) $dirigeant['actionnaire']));
+            $appliquerPlage('SA_NON_ACTIONNAIRES', $nbAdministrateurs > 0 ? $nonActionnaires / $nbAdministrateurs : 0);
+            $ag = $this->reglesValidation->trouver('SA_ADMIN_GENERAL', $typeId);
+            if (! $ag) {
+                $ajouterRegleAbsente('SA_ADMIN_GENERAL');
+            } elseif (count($associes) <= (float) $ag['valeur_max'] && ! $this->contientFonction($dirigeants, ['administrateur_general', 'administrateur général', 'administrateur general', 'ag'])) {
+                $bloquants[] = $ag['message'];
+            }
         }
 
         if (strtoupper($typeSociete) === 'SNC') {
-            if ($this->aUnAssocieMineur($associes)) {
-                $bloquants[] = 'SNC : un associé mineur non émancipé est interdit (art. 5 et 6).';
-            }
-
-            if ($this->aUnConjoint($associes)) {
-                $bloquants[] = 'SNC : les époux associés ne sont pas admis dans la même société (art. 5 et 6).';
-            }
+            $mineur = $this->reglesValidation->trouver('SNC_MINEUR', $typeId);
+            $epoux = $this->reglesValidation->trouver('SNC_EPOUX', $typeId);
+            if (! $mineur) $ajouterRegleAbsente('SNC_MINEUR');
+            elseif ($this->aUnAssocieMineur($associes) && (float) $mineur['valeur_max'] === 0) $bloquants[] = $mineur['message'];
+            if (! $epoux) $ajouterRegleAbsente('SNC_EPOUX');
+            elseif ($this->aUnConjoint($associes) && (float) $epoux['valeur_max'] === 0) $bloquants[] = $epoux['message'];
         }
 
         $duree = $societe['duree_annees'] ?? null;
-        if ($duree !== null && $duree !== '' && (int) $duree > 99) {
-            $bloquants[] = 'La durée de la société ne peut pas dépasser 99 ans.';
+        $dureeRegle = $this->reglesValidation->trouver('duree_max', null);
+        if (! $dureeRegle) {
+            $ajouterRegleAbsente('duree_max');
+        } elseif ($duree !== null && $duree !== '' && $dureeRegle['valeur_max'] !== null && (float) $duree > (float) $dureeRegle['valeur_max']) {
+            $bloquants[] = $dureeRegle['message'];
         }
 
         $nom = trim((string) ($societe['denomination'] ?? ''));
