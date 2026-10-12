@@ -1,0 +1,39 @@
+<?= $this->extend('_layout') ?>
+<?= $this->section('content') ?>
+<h1>Phase B — Registre des assemblées</h1>
+<p><a href="<?= site_url('dossiers/' . $societeId . '/phase-b') ?>">← Retour à la phase B</a></p>
+
+<div class="card">
+    <h2>Historique des assemblées</h2>
+    <?php if (empty($registre)): ?>
+        <p>Aucune assemblée n’a encore été tenue.</p>
+    <?php else: ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nature</th>
+                    <th>Convocation</th>
+                    <th>Date réunion</th>
+                    <th>Quorum</th>
+                    <th>Président</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($registre as $ligne): ?>
+                    <tr>
+                        <td><?= esc((string) ($ligne['nature'] ?? '—')) ?></td>
+                        <td><?= (int) ($ligne['numero_convocation'] ?? 1) ?></td>
+                        <td><?= esc((string) ($ligne['date_reunion'] ?? '—')) ?></td>
+                        <td><?= ! empty($ligne['quorum_atteint']) ? 'Atteint' : 'Manquant' ?></td>
+                        <td><?= esc((string) ($ligne['president'] ?? '—')) ?></td>
+                        <td>
+                            <a class="button secondary" href="<?= site_url('pdf/proces-verbaux/' . ($ligne['reunion_id'] ?? 0)) ?>">PV PDF</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
+<?= $this->endSection() ?>

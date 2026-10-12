@@ -7,6 +7,15 @@
     <p>Soumission : <?= esc($dossier['date_soumission'] ?? 'Non renseignée') ?> —
         Validation : <?= esc($dossier['date_validation'] ?? 'Non renseignée') ?> —
         Immatriculation : <?= esc($dossier['date_immatriculation'] ?? 'Non renseignée') ?></p>
+
+    <div class="card">
+        <h2>Réunions et assemblées</h2>
+        <p>Accédez au workflow de la phase B pour planifier les réunions, tenir l’assemblée, enregistrer les votes et consulter le registre.</p>
+        <div class="actions">
+            <a class="button" href="<?= site_url('dossiers/' . $societe['id'] . '/phase-b') ?>">Ouvrir la phase B</a>
+        </div>
+    </div>
+
     <div class="card">
         <h2>A6 — Mettre à jour le suivi</h2>
         <form method="post" action="<?= site_url('dossiers/' . $societe['id'] . '/statut') ?>">

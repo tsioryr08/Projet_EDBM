@@ -1,0 +1,55 @@
+ERROR - 2026-10-11 18:41:40 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php(201): mysqli->real_connect()
+#1 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(555): CodeIgniter\Database\MySQLi\Connection->connect()
+#2 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(795): CodeIgniter\Database\BaseConnection->initialize()
+#3 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query()
+#4 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Model.php(253): CodeIgniter\Database\BaseBuilder->get()
+#5 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/BaseModel.php(676): CodeIgniter\Model->doFindAll()
+#6 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/app/Controllers/Societes.php(27): CodeIgniter\BaseModel->findAll()
+#7 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(951): App\Controllers\Societes->type()
+#8 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+#9 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+#10 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(417): CodeIgniter\CodeIgniter->run()
+#11 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+#12 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/public/index.php(59): CodeIgniter\Boot::bootWeb()
+#13 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/rewrite.php(44): require_once('...')
+#14 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/MySQLi/Connection.php:231
+Stack trace:
+#0 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(555): CodeIgniter\Database\MySQLi\Connection->connect()
+#1 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseConnection.php(795): CodeIgniter\Database\BaseConnection->initialize()
+#2 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query()
+#3 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Model.php(253): CodeIgniter\Database\BaseBuilder->get()
+#4 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/BaseModel.php(676): CodeIgniter\Model->doFindAll()
+#5 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/app/Controllers/Societes.php(27): CodeIgniter\BaseModel->findAll()
+#6 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(951): App\Controllers\Societes->type()
+#7 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+#8 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+#9 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(417): CodeIgniter\CodeIgniter->run()
+#10 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+#11 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/public/index.php(59): CodeIgniter\Boot::bootWeb()
+#12 /home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/system/rewrite.php(44): require_once('...')
+#13 {main}
+CRITICAL - 2026-10-11 18:41:40 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: societes/type]
+in SYSTEMPATH/Database/BaseConnection.php on line 606.
+ 1 SYSTEMPATH/Database/BaseConnection.php(795): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query()
+ 3 SYSTEMPATH/Model.php(253): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(676): CodeIgniter\Model->doFindAll()
+ 5 APPPATH/Controllers/Societes.php(27): CodeIgniter\BaseModel->findAll()
+ 6 SYSTEMPATH/CodeIgniter.php(951): App\Controllers\Societes->type()
+ 7 SYSTEMPATH/CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController()
+ 8 SYSTEMPATH/CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest()
+ 9 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+12 SYSTEMPATH/rewrite.php(44): require_once('/home/asus/Documents/DLA/S5/Droits_des_affaires/Projet_EDBM/public/index.php')
+DEBUG - 2026-10-11 19:30:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-10-11 19:31:00 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-10-11 19:31:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-10-11 19:32:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-10-11 19:33:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
