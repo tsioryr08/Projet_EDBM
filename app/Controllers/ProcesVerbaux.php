@@ -3,24 +3,24 @@
 namespace App\Controllers;
 
 use App\Libraries\AccesDossier;
-use App\Libraries\ConvocationService;
+use App\Libraries\ProcesVerbalService;
 use App\Libraries\PdfService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
-class Convocations extends BaseController
+class ProcesVerbaux extends BaseController
 {
-    public function generate(int $reunionId): ResponseInterface
+    public function generate(int $assembleeId): ResponseInterface
     {
-        $societeId = AccesDossier::societeDeReunion($reunionId);
+        $societeId = AccesDossier::societeDeAssemblee($assembleeId);
         if ($societeId === null) {
-            throw PageNotFoundException::forPageNotFound('Réunion introuvable.');
+            throw PageNotFoundException::forPageNotFound('Assemblée introuvable.');
         }
         if (! AccesDossier::ouvert($societeId)) {
             return AccesDossier::redirection($societeId);
         }
 
-        $document = (new ConvocationService())->preparer($reunionId);
+        $document = (new ProcesVerbalService())->preparer($assembleeId);
         $result = (new PdfService())->generateFromView(
             $document['vue'],
             $document['data'],

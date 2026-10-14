@@ -40,6 +40,7 @@ class PdfService
         $html = view('pdf/layout', [
             'title'   => $data['titre'] ?? 'Document juridique',
             'content' => view($view, $data),
+            'is_pv'   => ! empty($data['is_pv']),
         ]);
 
         $options = new Options();
