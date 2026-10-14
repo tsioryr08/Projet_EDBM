@@ -71,6 +71,12 @@ class ConvocationService
 
         $nature = (string) $reunion['nature_code'];
         $numero = (int) $reunion['numero_convocation'];
+        $reference = $this->reference(
+            (string) $societe['denomination'],
+            $nature,
+            (string) $reunion['date_reunion'],
+            $numero,
+        );
 
         $convoques = $this->convoques
             ->where('reunion_id', $reunionId)
@@ -91,6 +97,7 @@ class ConvocationService
             'nature'             => $nature,
             'qualificatif'       => $nature === 'AGE' ? 'extraordinaire' : 'ordinaire',
             'numero_convocation' => $numero,
+            'reference'          => $reference,
             'date_reunion'       => $reunion['date_reunion'],
             'date_reunion_fr'    => $this->dateFr((string) $reunion['date_reunion']),
             'heure'              => substr((string) $reunion['heure'], 0, 5),
@@ -140,6 +147,14 @@ class ConvocationService
         $date = preg_match('/^\d{4}-\d{2}-\d{2}/', $dateReunion) ? substr($dateReunion, 0, 10) : date('Y-m-d');
 
         return 'convocation-' . trim($base, '-') . '-' . $nature . '-' . $date . '-R' . $reunionId . '.pdf';
+    }
+
+    private function reference(string $societe, string $nature, string $dateReunion, int $numeroConvocation): string
+    {
+        $base = strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/', '-', $societe) ?? 'SOCIETE', '-'));
+        $date = preg_match('/^\d{4}-\d{2}-\d{2}/', $dateReunion) ? substr($dateReunion, 0, 10) : date('Y-m-d');
+
+        return $base . '-' . strtoupper($nature) . '-' . $date . '-R' . $numeroConvocation;
     }
 
     /** « 22 octobre 2026 » ; retourne une ligne vide si la date est invalide. */

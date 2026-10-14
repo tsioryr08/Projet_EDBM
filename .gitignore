@@ -1,6 +1,6 @@
 # Dependencies and local configuration
 /vendor/
-/.env
+
 
 # CodeIgniter runtime files
 /writable/cache/*

@@ -78,28 +78,29 @@ actualiserDelaiStatuts();
 </script>
 
 <?php if (! empty($preview)): ?>
+    <?php $resultatPlanification = $preview['reunion'] ?? $preview; ?>
     <div class="card">
         <h2>2. Résultat calculé</h2>
-        <p><strong>Société :</strong> <?= esc($preview['societe'] ?? $societe['denomination']) ?></p>
-        <p><strong>Type :</strong> <?= esc($preview['type'] ?? '—') ?></p>
-        <p><strong>Nature :</strong> <?= esc($preview['nature'] ?? '—') ?></p>
-        <p><strong>Date de réunion :</strong> <?= esc($preview['date_reunion'] ?? '—') ?></p>
-        <p><strong>Date limite de convocation :</strong> <?= esc($preview['date_convocation'] ?? '—') ?></p>
-        <p><strong>Délai appliqué :</strong> <?= esc((string) ($preview['delai_jours'] ?? '—')) ?> jours</p>
-        <p><strong>Mode de calcul :</strong> <?= esc($preview['mode_calcul'] ?? '—') ?></p>
-        <p><strong>Forme d’envoi :</strong> <?= esc($preview['forme_envoi'] ?? '—') ?></p>
-        <p><strong>En retard ?</strong> <?= ! empty($preview['en_retard']) ? 'Oui' : 'Non' ?></p>
+        <p><strong>Société :</strong> <?= esc($resultatPlanification['societe'] ?? $societe['denomination']) ?></p>
+        <p><strong>Type :</strong> <?= esc($resultatPlanification['type'] ?? '—') ?></p>
+        <p><strong>Nature :</strong> <?= esc($resultatPlanification['nature'] ?? '—') ?></p>
+        <p><strong>Date de réunion :</strong> <?= esc($resultatPlanification['date_reunion'] ?? '—') ?></p>
+        <p><strong>Date limite de convocation :</strong> <?= esc($resultatPlanification['date_convocation'] ?? '—') ?></p>
+        <p><strong>Délai appliqué :</strong> <?= esc((string) ($resultatPlanification['delai_jours'] ?? '—')) ?> jours</p>
+        <p><strong>Mode de calcul :</strong> <?= esc($resultatPlanification['mode_calcul'] ?? '—') ?></p>
+        <p><strong>Forme d’envoi :</strong> <?= esc($resultatPlanification['forme_envoi'] ?? '—') ?></p>
+        <p><strong>En retard ?</strong> <?= ! empty($resultatPlanification['en_retard']) ? 'Oui' : 'Non' ?></p>
 
-        <?php $just = $preview['justification'] ?? []; ?>
+        <?php $just = $resultatPlanification['justification'] ?? []; ?>
         <?= view('dossier/partials/justification_block', [
             'motif' => $just['motif'] ?? null,
-            'article' => $just['article'] ?? null,
+            'article' => $just['article'] ?? $just['source'] ?? null,
             'statut' => $just['statut'] ?? 'a_confirmer',
             'source' => $just['source'] ?? null,
-            'message' => $just['message'] ?? null,
+            'message' => $just['message'] ?? $just['avertissement'] ?? $just['precision'] ?? null,
         ]) ?>
 
-        <?php $reunionCreee = $preview['reunion'] ?? []; ?>
+        <?php $reunionCreee = $resultatPlanification; ?>
         <h3>Personnes convoquées</h3>
         <p>La liste est constituée à partir des membres de la société : les associés/actionnaires pour une AG, les administrateurs pour un CA.</p>
         <?php $convoques = $reunionCreee['convoques'] ?? []; ?>
@@ -120,7 +121,7 @@ actualiserDelaiStatuts();
         <?php endif; ?>
     </div>
 <?php endif; ?>
-
+<!-- 
 <div class="card">
     <h2>Historique/planifications</h2>
     <?php if (empty($reunions)): ?>
@@ -137,9 +138,9 @@ actualiserDelaiStatuts();
             </thead>
             <tbody>
                 <?php foreach ($reunions as $reunion): ?>
-                    <tr>
+                    <tr class="reunion-clickable" data-href="<?= site_url('dossiers/' . $societeId . '/phase-b/reunions/' . (int) $reunion['id']) ?>" tabindex="0" role="link" aria-label="Voir les détails de la réunion <?= esc($reunion['nature_code']) ?> du <?= esc($reunion['date_reunion']) ?>">
                         <td><?= esc($reunion['nature_code']) ?></td>
-                        <td><?= (int) ($reunion['numero_convocation'] ?? 1) ?></td>
+                        <td>#<?= (int) ($reunion['numero_convocation'] ?? 1) ?></td>
                         <td><?= esc($reunion['date_reunion']) ?></td>
                         <td><?= esc((string) ($reunion['delai_applique'] ?? '—')) ?></td>
                     </tr>
@@ -147,5 +148,17 @@ actualiserDelaiStatuts();
             </tbody>
         </table>
     <?php endif; ?>
-</div>
+</div> -->
+<script>
+document.querySelectorAll('.reunion-clickable').forEach((row) => {
+    const ouvrir = () => window.location.href = row.dataset.href;
+    row.addEventListener('click', ouvrir);
+    row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            ouvrir();
+        }
+    });
+});
+</script>
 <?= $this->endSection() ?>

@@ -25,6 +25,7 @@ $dernier = array_key_last($destinataires);
         </p>
 
         <p style="text-align: right;">Le <?= $e($date_emission) ?></p>
+        <p><strong>Référence :</strong> <?= $e($reference ?? '') ?></p>
 
         <p><?= $e($convoque['nom_affiche'] ?? $blanc) ?></p>
 

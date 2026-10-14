@@ -95,3 +95,28 @@ S’il s’est abstenu ou est absent : rejetée (déduction).
 Le PV doit mentionner « voix prépondérante du président, art. 483 ».
 
 Un point à vérifier dans ton code : l’article 483 parle de la moitié des membres présents pour le quorum, sans dire si les représentés comptent. À confirmer avant de les compter.
+
+
+
+Crée une présentation de 10 slides (format 16:9, en français) pour un exposé oral de 7 à 8 minutes dans un cours de droit des sociétés (droit malgache). L'exposé sera suivi d'une démonstration du logiciel, qui n'est pas à mettre dans les slides. Deux étudiants présentent : Tsiory et Olivier.
+
+LE PROJET
+SociéTech est un logiciel (PHP, CodeIgniter 4, MySQL) qui accompagne une société de sa création jusqu'à ses assemblées, selon la loi malgache 2003-036 modifiée par la loi 2014-010. Il aide à créer une société (choix du type, liste des pièces à fournir, statuts en PDF), puis à la faire vivre (convocation des réunions, présents et procurations, quorum, votes, procès-verbal en PDF, registre). Particularités : (1) la date de convocation est calculée automatiquement en jours francs ; (2) les règles de droit (délais, quorums, majorités, pièces) sont stockées comme des données dans une base, pas écrites dans le code ; (3) chaque décision calculée est expliquée par un motif, un article de loi et un statut (vérifié, à confirmer ou déduction). Les formes de société couvertes : SA, SARL, SARLU, SCS, SCA, SNC, plus la société civile.
+
+STYLE
+Sobre et professionnel, adapté à un cours de droit. Fond clair, une couleur principale bleu foncé et un accent discret. Une seule idée par slide, très peu de texte (maximum 4 puces courtes par slide), police lisible. Utilise des schémas plutôt que des paragraphes. Ne mets pas de longs textes : les étudiants parleront.
+
+SLIDES (titre : contenu)
+1. Titre : « SociéTech : de la création d'une société à ses assemblées » · Droit des sociétés, Madagascar · Tsiory et Olivier.
+2. Pourquoi ce projet ? : beaucoup de règles (type de société, pièces, délais, quorum, majorité) ; une erreur de délai ou de quorum rend des décisions contestables ; notre idée : un logiciel qui applique les règles et explique chaque résultat par un article.
+3. Les formes de société : loi 2003-036 modifiée par la loi 2014-010 ; liste SA, SARL, SARLU, SCS, SCA, SNC (+ SC ajoutée) ; deux exemples : SARL sans capital minimum légal (art. 327), SA de 3 actionnaires ou moins avec administrateur général obligatoire (art. 519).
+4. Créer une société : schéma horizontal en 4 étapes (compte → dossier en ligne → étude, paiement et dépôt → immatriculation) ; en dessous, ce que fait le logiciel : checklist des pièces selon le type et la catégorie d'associé, alerte pièce périmée, statuts en PDF ; statuts du dossier : brouillon → soumis → validé → immatriculé.
+5. La vie de la société : 4 réunions (AGC constitutive, AGO ordinaire, AGE extraordinaire, CA conseil d'administration) ; schéma circulaire : convoquer → tenir la séance → quorum → vote → procès-verbal → registre.
+6. Les règles de la loi (exemple : la SA) : tableau avec colonnes Réunion / Délai de convocation / Quorum (1re puis 2e convocation) / Majorité. AGC : 6 jours, 1/2 puis 1/4 des actions, majorité à chercher. AGO : 15 jours puis 6 jours, 1/4 puis aucun quorum, plus de la moitié des voix exprimées. AGE : 15 jours puis 6 jours, 1/2 puis 1/4, deux tiers des voix exprimées. CA : délai fixé par les statuts, 1/2 des membres, majorité des présents ou représentés, voix prépondérante du président de séance en cas de partage. Sources en petit : art. 428, 482, 483, 536, 570-571, 574-575.
+7. La date de convocation en jours francs : frise chronologique du 29 novembre au 15 décembre ; formule : date de réunion − délai − 1 ; exemple : réunion le 15/12/2026, délai de 15 jours → envoi au plus tard le 29/11/2026 (le 30/11 en jours calendaires) ; mention : la date se recalcule seule si on change la réunion.
+8. Les règles sont des données : comparaison à deux colonnes « Règle écrite dans le code (ce qu'on évite) » et « Règle stockée dans la base (notre choix) » ; en dessous, un exemple de décision expliquée : « 75 voix pour, 75 contre en AGO → résolution rejetée · statut : déduction (le texte ne prévoit pas de départage) » ; mention : règle introuvable = « à chercher », jamais inventée.
+9. Les documents PDF et l'interface : trois blocs (Statuts : un modèle par type ; Convocation : AG et CA, 1re ou 2e convocation ; Procès-verbal : présents, représentés, quorum, résolutions, voix prépondérante, justification) ; schéma : données → gabarit juridique → PDF ; deux parties d'interface : création de la société / vie de la société.
+10. Limites et suite : à chercher (SNC, SCS, SCA, SC, quorum de la SARL, majorité de l'AGC) ; à confirmer (abstentions, représentés au quorum du CA) ; « Place à la démonstration ».
+
+CONTRAINTES
+N'invente aucun article de loi, chiffre ou règle : utilise uniquement les informations ci-dessus. Pas de photos génériques ni d'icônes décoratives en excès. Pas de texte long dans les slides. Garde les sources (numéros d'articles) en petits caractères.

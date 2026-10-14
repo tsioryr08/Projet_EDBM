@@ -10,6 +10,7 @@ use App\Models\ReunionModel;
 use App\Models\SocieteModel;
 use App\Models\TypeSocieteModel;
 use DateTimeImmutable;
+use DateTimeZone;
 
 /**
  * Planifie une réunion : lit le délai dans regle_delai (jamais en dur),
@@ -103,6 +104,15 @@ class ReunionService
         }
 
         $dateConvocation = $this->calcul->calculerDateConvocation($dateReunion, $delai, $mode, $joursFeries);
+        $aujourdHui = new DateTimeImmutable('today', new DateTimeZone('Indian/Antananarivo'));
+        if ($dateConvocation->format('Y-m-d') < $aujourdHui->format('Y-m-d')) {
+            throw new \RuntimeException(sprintf(
+                'Impossible de planifier cette réunion : avec un délai de %d jours %s, la convocation devait être envoyée au plus tard le %s. Aujourd’hui, le délai est dépassé. Choisis une date de réunion plus éloignée.',
+                $delai,
+                $mode === 'franc' ? 'francs' : ($mode === 'ouvrable' ? 'ouvrables' : 'calendaires'),
+                $dateConvocation->format('d/m/Y'),
+            ));
+        }
 
         $resultat = [
             'societe'             => $societe['denomination'],

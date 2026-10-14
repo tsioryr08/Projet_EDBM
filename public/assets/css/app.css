@@ -59,6 +59,9 @@ button:disabled { opacity: .55; cursor: wait; }
 .status-badge.muted { color: var(--muted); background: #edf0f2; }
 .table-wrap { overflow-x: auto; margin: var(--space-3) 0; }
 table { width: 100%; min-width: 620px; border-collapse: collapse; background: var(--surface); }
+.reunion-clickable { cursor: pointer; }
+.reunion-clickable:hover { background: var(--surface-muted, #f3f6fa); }
+.reunion-clickable:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
 th, td { border-bottom: 1px solid var(--line); padding: .7rem; text-align: left; vertical-align: top; }
 th { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; background: #f8fafb; }
 .field { display: flex; flex-direction: column; gap: .3rem; margin: .8rem 0; }

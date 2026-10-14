@@ -177,7 +177,7 @@ class Dossiers extends BaseController
             ->orderBy('id', 'DESC')
             ->get()->getResultArray();
 
-        $preview = session()->getFlashdata('phase_b_planifier');
+        $preview = session()->get('phase_b_planifier_' . $societeId);
         $planningForm = session()->getFlashdata('planning_form') ?? [];
         $planningError = session()->getFlashdata('planning_error');
 
@@ -407,11 +407,69 @@ class Dossiers extends BaseController
         ]);
     }
 
+    public function phaseBReunionDetail(int $societeId, int $reunionId): string|ResponseInterface
+    {
+        if ($redirect = $this->verifierAcces($societeId)) {
+            return $redirect;
+        }
+
+        $societe = (new SocieteModel())->find($societeId);
+        if (! $societe) {
+            throw PageNotFoundException::forPageNotFound('Société introuvable.');
+        }
+
+        $db = db_connect();
+        $reunion = $db->table('reunion')->where('id', $reunionId)->where('societe_id', $societeId)->get()->getRowArray();
+        if (! $reunion) {
+            throw PageNotFoundException::forPageNotFound('Réunion introuvable.');
+        }
+
+        $convoques = $db->table('convoque')->where('reunion_id', $reunionId)->orderBy('nom_affiche')->get()->getResultArray();
+        $assemblee = $db->table('assemblee')->where('reunion_id', $reunionId)->get()->getRowArray();
+        $participants = $assemblee
+            ? $db->table('participant')->where('assemblee_id', $assemblee['id'])->orderBy('nom')->get()->getResultArray()
+            : [];
+        $pouvoirs = $assemblee
+            ? $db->table('pouvoir')->where('assemblee_id', $assemblee['id'])->get()->getResultArray()
+            : [];
+        $nomsParticipants = array_column($participants, 'nom', 'id');
+        foreach ($pouvoirs as &$pouvoir) {
+            $pouvoir['mandant_nom'] = $nomsParticipants[$pouvoir['mandant_id']] ?? '—';
+            $pouvoir['mandataire_nom'] = ($pouvoir['mandataire_nom_externe'] ?? null)
+                ?: ($nomsParticipants[$pouvoir['mandataire_id']] ?? '—');
+        }
+        unset($pouvoir);
+
+        $resolutions = $assemblee
+            ? $db->table('resolution')->where('assemblee_id', $assemblee['id'])->orderBy('numero')->get()->getResultArray()
+            : [];
+        $interventions = $assemblee && $db->tableExists('intervention')
+            ? (new InterventionService())->pourAssemblee((int) $assemblee['id'])
+            : [];
+        $ordreDuJour = json_decode((string) ($reunion['ordre_du_jour'] ?? '[]'), true);
+
+        return view('dossier/phase_b_reunion_detail', [
+            'societe' => $societe,
+            'societeId' => $societeId,
+            'reunion' => $reunion,
+            'convoques' => $convoques,
+            'assemblee' => $assemblee,
+            'participants' => $participants,
+            'pouvoirs' => $pouvoirs,
+            'resolutions' => $resolutions,
+            'interventions' => $interventions,
+            'ordreDuJour' => is_array($ordreDuJour) ? $ordreDuJour : [],
+        ]);
+    }
+
     public function planifierPhaseB(int $societeId): ResponseInterface
     {
         if ($redirect = $this->verifierAcces($societeId)) {
             return $redirect;
         }
+
+        // Le résultat précédent ne doit pas rester affiché après une nouvelle tentative.
+        session()->remove('phase_b_planifier_' . $societeId);
 
         $nature = strtoupper((string) $this->request->getPost('nature'));
         $dateReunion = (string) $this->request->getPost('date_reunion');
@@ -442,22 +500,38 @@ class Dossiers extends BaseController
                 ]);
         }
 
-        $result = (new PhaseBService())->ecranPlanification(
-            $societeId,
-            $nature,
-            $dateReunion,
-            $heure,
-            $lieu,
-            $ordreDuJour,
-            $numeroConvocation,
-            'franc',
-            $delaiStatuts,
-            true,
-            $reunionPrecedenteId ? (int) $reunionPrecedenteId : null,
-        );
+        try {
+            $result = (new PhaseBService())->ecranPlanification(
+                $societeId,
+                $nature,
+                $dateReunion,
+                $heure,
+                $lieu,
+                $ordreDuJour,
+                $numeroConvocation,
+                'franc',
+                $delaiStatuts,
+                true,
+                $reunionPrecedenteId ? (int) $reunionPrecedenteId : null,
+            );
+        } catch (\RuntimeException $exception) {
+            return redirect()->to('/dossiers/' . $societeId . '/phase-b/planifier')
+                ->with('planning_error', $exception->getMessage())
+                ->with('planning_form', [
+                    'nature' => $nature,
+                    'date_reunion' => $dateReunion,
+                    'heure' => $heure,
+                    'lieu' => $lieu,
+                    'numero_convocation' => $numeroConvocation,
+                    'reunion_precedente_id' => $reunionPrecedenteId,
+                    'ordre_du_jour' => (string) $this->request->getPost('ordre_du_jour'),
+                    'delai_statuts' => $delaiStatuts ?? '',
+                ]);
+        }
+
+        session()->set('phase_b_planifier_' . $societeId, $result);
 
         return redirect()->to('/dossiers/' . $societeId . '/phase-b/planifier')
-            ->with('phase_b_planifier', $result)
             ->with('success', 'Réunion planifiée : ' . $result['resume']['nature'] . ' le ' . $result['resume']['date_reunion']);
     }
 
@@ -554,7 +628,7 @@ class Dossiers extends BaseController
                         'contre' => (int) ($row['contre'] ?? 0),
                         'abstention' => (int) ($row['abstention'] ?? 0),
                         'blanc' => (int) ($row['blanc'] ?? 0),
-                        'sens_vote_president' => $row['sens_vote_president'] ?: null,
+                        'sens_vote_president' => ($row['sens_vote_president'] ?? null) ?: null,
                     ];
                 }
             }

@@ -25,6 +25,9 @@
 </div>
 
 <?php if (! empty($selectedAssemblee)): ?>
+    <div class="card">
+        <p><strong>Réunion sélectionnée :</strong> <?= esc($selectedAssemblee['nature_code']) ?> — <?= esc($selectedAssemblee['date_reunion']) ?></p>
+    </div>
     <?php if (empty($selectedAssemblee['quorum_atteint'])): ?>
         <div class="notice">Le quorum n’a pas été atteint pour cette réunion. Les résolutions et les votes ne peuvent pas être enregistrés.</div>
     <?php else: ?>
@@ -40,9 +43,16 @@
                     <input name="resolutions_rows[0][contre]" type="number" min="0" value="0" placeholder="Contre">
                     <input name="resolutions_rows[0][abstention]" type="number" min="0" value="0" placeholder="Abstention">
                     <input name="resolutions_rows[0][blanc]" type="number" min="0" value="0" placeholder="Blanc">
-                    <select name="resolutions_rows[0][sens_vote_president]"><option value="">Voix prépondérante non utilisée</option><option value="pour">Président : pour</option><option value="contre">Président : contre</option><option value="abstention">Président : abstention</option></select>
+                    <?php if (($selectedAssemblee['nature_code'] ?? '') === 'CA'): ?>
+                        <select name="resolutions_rows[0][sens_vote_president]"><option value="">Départage du président si égalité</option><option value="pour">En cas d’égalité : président pour</option><option value="contre">En cas d’égalité : président contre</option><option value="abstention">En cas d’égalité : président s’abstient</option></select>
+                    <?php endif; ?>
                 </div>
             </div>
+            <?php if (($selectedAssemblee['nature_code'] ?? '') === 'CA'): ?>
+                <p>Compte les voix normales de tous les administrateurs dans « Pour » et « Contre », président compris. Le champ ci-dessus sert uniquement si ces deux totaux sont égaux : la voix prépondérante départage alors le CA (article 483, sauf clause contraire des statuts).</p>
+            <?php else: ?>
+                <p>Les totaux doivent inclure les votes des personnes qui ont le droit de voter. La voix prépondérante prévue pour le CA ne s’applique pas à cette réunion.</p>
+            <?php endif; ?>
             <button type="button" class="button secondary" data-add="resolutions">Ajouter une résolution</button>
             <p>Le formulaire accepte aussi le format texte si vous préférez saisir les résolutions en une seule zone.</p>
             <div class="actions">
@@ -61,7 +71,9 @@
                 <h3>Résolution n°<?= (int) ($resolution['numero'] ?? 1) ?></h3>
                 <p><strong>Texte :</strong> <?= esc((string) ($resolution['texte'] ?? '—')) ?></p>
                 <p><strong>Pour :</strong> <?= (int) ($resolution['pour'] ?? 0) ?> — <strong>Contre :</strong> <?= (int) ($resolution['contre'] ?? 0) ?> — <strong>Abstention :</strong> <?= (int) ($resolution['abstention'] ?? 0) ?> — <strong>Blanc :</strong> <?= (int) ($resolution['blanc'] ?? 0) ?></p>
-                <?php if (! empty($resolution['sens_vote_president'])): ?><p><strong>Vote du président :</strong> <?= esc($resolution['sens_vote_president']) ?></p><?php endif; ?>
+                <?php if (($selectedAssemblee['nature_code'] ?? '') === 'CA' && ! empty($resolution['sens_vote_president'])): ?>
+                    <p><strong>Voix prépondérante du président :</strong> <?= esc($resolution['sens_vote_president']) ?> — <?= ! empty($resolution['voix_preponderante_utilisee']) ? 'utilisée pour départager l’égalité' : 'non utilisée : les voix pour et contre ne sont pas à égalité' ?></p>
+                <?php endif; ?>
                 <p><strong>Décision :</strong> <?= ($resolution['adoptee'] ?? null) === null ? 'En attente du vote du président' : ($resolution['adoptee'] ? 'Adoptée' : 'Rejetée') ?></p>
                 <?php $just = $resolution['justification'] ?? []; ?>
                 <?= view('dossier/partials/justification_block', [

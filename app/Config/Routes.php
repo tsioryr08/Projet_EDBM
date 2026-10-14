@@ -25,6 +25,7 @@ $routes->get('dossiers/(:num)/phase-b/jour-j/(:num)', 'Dossiers::phaseBJourJ/$1/
 $routes->get('dossiers/(:num)/phase-b/votes', 'Dossiers::phaseBVotes/$1');
 $routes->get('dossiers/(:num)/phase-b/votes/(:num)', 'Dossiers::phaseBVotes/$1/$2');
 $routes->get('dossiers/(:num)/phase-b/registre', 'Dossiers::phaseBRegistre/$1');
+$routes->get('dossiers/(:num)/phase-b/reunions/(:num)', 'Dossiers::phaseBReunionDetail/$1/$2');
 $routes->post('dossiers/(:num)/phase-b/planifier', 'Dossiers::planifierPhaseB/$1');
 $routes->post('dossiers/(:num)/phase-b/tenir', 'Dossiers::tenirPhaseB/$1');
 $routes->post('dossiers/(:num)/phase-b/interventions', 'Dossiers::ajouterIntervention/$1');
